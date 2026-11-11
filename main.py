@@ -1,9 +1,10 @@
-from fastapi import FastAPI
-from app.repositories.snapshot_repository import get_all
-from app.core.database import init_db
-
 from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from app.core.database import init_db
 from app.core.scheduler import start_scheduler, stop_scheduler
+from app.repositories.snapshot_repository import get_all
 
 
 @asynccontextmanager
@@ -13,15 +14,8 @@ async def lifespan(app):
     yield
     stop_scheduler()
 
-app = FastAPI(lifespan=lifespan)
 
-
-# app = FastAPI(title="OpenWealth", version="0.1.0")
-
-
-@app.on_event("startup")
-def startup():
-    init_db()
+app = FastAPI(title="OpenWealth", version="0.1.0", lifespan=lifespan)
 
 
 @app.get("/patrimonio")

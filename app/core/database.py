@@ -1,8 +1,18 @@
 import sqlite3
 from pathlib import Path
 from app.core.config import DATABASE_URL
+import os
 
-DB_PATH = DATABASE_URL.replace("sqlite:///", "")
+
+# app/core/database.py
+import os
+import sqlite3
+from pathlib import Path
+from app.core.config import DATABASE_URL
+
+_DEFAULT_PATH = DATABASE_URL.replace("sqlite:///", "")
+
+DB_PATH = os.environ.get("OW_DB_PATH", DATABASE_URL.replace("sqlite:///", ""))
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS items (
@@ -71,16 +81,29 @@ FROM snapshots GROUP BY snapshot_date, category;
 """
 
 
+# app/core/database.py
+import os
+import sqlite3
+from pathlib import Path
+from app.core.config import DATABASE_URL
+
+_DEFAULT_PATH = DATABASE_URL.replace("sqlite:///", "")
+
+
+def _db_path() -> str:
+    return os.environ.get("OW_DB_PATH", _DEFAULT_PATH)
+
+
 def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(_db_path())
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
 def init_db():
-    # garante que a pasta data/ existe
-    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
+    Path(_db_path()).parent.mkdir(parents=True, exist_ok=True)
     with get_connection() as conn:
         conn.executescript(SCHEMA)
-    print(f"✅ Banco pronto em: {DB_PATH}")
+    print(f"✅ Banco pronto em: {_db_path()}")
+

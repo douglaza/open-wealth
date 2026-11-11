@@ -82,23 +82,6 @@ class TestPluggyClient:
             with pytest.raises(Exception):
                 client.get_accounts("item-invalido")
 
-    # def test_token_sent_in_headers(self, client):
-    #     """Garante que o token é enviado como Bearer."""
-    #     mock_response = MagicMock()
-    #     mock_response.json.return_value = MOCK_ACCOUNTS
-    #     with patch("requests.get", return_value=mock_response) as mock_get:
-    #         client._get("/accounts?itemId=item-123")
-    #         headers = mock_get.call_args.kwargs["headers"]
-    #         assert headers["Authorization"] == "Bearer fake-token"
-
-    # def test_token_sent_in_headers(self, client):
-    #     mock_response = MagicMock()
-    #     mock_response.json.return_value = {"results": []}
-    #     with patch("requests.get", return_value=mock_response) as mock_get:
-    #         client._get("/accounts")
-    #         headers = mock_get.call_args.kwargs["headers"]
-    #         assert headers["X-API-KEY"] == "fake-token"
-
     def test_token_sent_in_headers(self, client):
         client._token = "fake-token"
         client._token_expiry = time.time() + 3600  # token "válido"
