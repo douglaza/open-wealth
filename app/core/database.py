@@ -1,0 +1,86 @@
+import sqlite3
+from pathlib import Path
+from app.core.config import DATABASE_URL
+
+DB_PATH = DATABASE_URL.replace("sqlite:///", "")
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS items (
+    id              TEXT PRIMARY KEY,
+    institution     TEXT NOT NULL,
+    connector_id    INTEGER,
+    status          TEXT DEFAULT 'ACTIVE',
+    created_at      TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS accounts (
+    id              TEXT PRIMARY KEY,
+    item_id         TEXT NOT NULL REFERENCES items(id),
+    name            TEXT NOT NULL,
+    type            TEXT,
+    balance         REAL DEFAULT 0,
+    currency        TEXT DEFAULT 'BRL',
+    updated_at      TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS investments (
+    id              TEXT PRIMARY KEY,
+    item_id         TEXT NOT NULL REFERENCES items(id),
+    name            TEXT NOT NULL,
+    type            TEXT,
+    quantity        REAL DEFAULT 0,
+    price           REAL DEFAULT 0,
+    value           REAL DEFAULT 0,
+    updated_at      TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS transactions (
+    id              TEXT PRIMARY KEY,
+    account_id      TEXT NOT NULL REFERENCES accounts(id),
+    description     TEXT,
+    amount          REAL NOT NULL,
+    date            TEXT NOT NULL,
+    category        TEXT,
+    created_at      TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS snapshots (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    snapshot_date   DATE NOT NULL,
+    institution     TEXT NOT NULL,
+    account_type    TEXT NOT NULL,
+    asset_name      TEXT NOT NULL,
+    category        TEXT NOT NULL,
+    amount          REAL NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_snapshots_date ON snapshots(snapshot_date);
+CREATE INDEX IF NOT EXISTS idx_snapshots_inst  ON snapshots(institution);
+
+CREATE VIEW IF NOT EXISTS v_evolucao AS
+SELECT snapshot_date, SUM(amount) AS patrimonio_total
+FROM snapshots GROUP BY snapshot_date;
+
+CREATE VIEW IF NOT EXISTS v_alocacao_instituicao AS
+SELECT snapshot_date, institution, SUM(amount) AS total
+FROM snapshots GROUP BY snapshot_date, institution;
+
+CREATE VIEW IF NOT EXISTS v_alocacao_classe AS
+SELECT snapshot_date, category, SUM(amount) AS total
+FROM snapshots GROUP BY snapshot_date, category;
+"""
+
+
+def get_connection() -> sqlite3.Connection:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
+def init_db():
+    # garante que a pasta data/ existe
+    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
+    with get_connection() as conn:
+        conn.executescript(SCHEMA)
+    print(f"✅ Banco pronto em: {DB_PATH}")
