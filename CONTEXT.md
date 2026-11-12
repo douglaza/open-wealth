@@ -10,7 +10,7 @@ Serve como memória de decisões, problemas encontrados e soluções adotadas.
 **open-wealth** é um agregador de patrimônio pessoal que:
 
 1. Conecta-se à API da [Pluggy.ai](https://pluggy.ai) (open finance) para
-  sincronizar contas bancárias e investimentos de múltiplas instituições.
+   sincronizar contas bancárias e investimentos de múltiplas instituições.
 2. Consolida tudo em um `Snapshot` diário de posições (`Position`).
 3. Calcula rentabilidade e totais (por instituição e geral).
 4. Agenda sincronização semanal via scheduler.
@@ -226,6 +226,16 @@ Conta Corrente   43701.43   (boleto, salário, condomínio...)
 Mastercard Black -1006.20   (SMART FIT, SPOTIFY, NETFLIX...)
 ```
 
+### 4.7. sync_all adaptado ao modo Development
+
+**Problema:** sync_all dependia de get_items() → 401 no modo Development.
+
+**Solução:** sync_all agora usa get_item() (item único do .env) e propaga
+item_id para get_accounts/get_investments. Extraído _build_positions()
+com fallbacks (balance/value ausentes → 0.0, listas None tratadas).
+Validado ponta a ponta no sandbox: Snapshot com 2 posições,
+total R$ 42.695,23. Em produção, bastará reativar get_items() no cliente.
+
 #### Lições
 
 - Modo Development ≠ produção: nem todos os endpoints estão disponíveis
@@ -237,16 +247,86 @@ Mastercard Black -1006.20   (SMART FIT, SPOTIFY, NETFLIX...)
 - Sempre cat no arquivo depois de colar código — colagem desalinhada gerou
   método inexistente que só estouraria em runtime.
 
+### 4.8. Investimentos com value null e amount divergente (bug silencioso)
+
+**Problema:** a primeira execução E2E mostrava CDR e ISUS11 STOCK com
+R0,00enquantoodashboarddaPluggyexibiaR0,00 enquanto o dashboard da Pluggy exibia R0,00enquantoodashboarddaPluggyexibiaR 2.000,00 cada.
+Investigação direta na API revelou que o problema era maior do que
+parecia: 6 de 8 investimentos do sandbox vinham com value: null, e o
+patrimônio real estava subestimado em R$ 19.185,59 desde sempre
+(total real: R63.371,23,na~oR63.371,23, não R63.371,23,na~oR 44.185,64).
+
+**Armadilha adicional:** amount NÃO é fallback seguro para balance.
+No CDR do sandbox: amount=2500 mas balance=2000 (que é o valor exibido
+no dashboard). Usar amount geraria posição inflada.
+
+**Solução:** consolidacao.py passou a usar SEMPRE balance como valor
+da posição de investimento. Fallback em cascata apenas se balance
+ausente: value → quantity × price → 0.0. Extraído
+_investment_amount() centralizando a regra, com docstring explicando
+o porquê.
+
+**Lição:** não confiar em nenhum campo único da API como
+"sempre preenchido" — validar contra o dashboard oficial cedo.
+Campos com mesmo nome têm semântica diferente por type de
+investimento.
+
+### 4.9.Instituição null em investimentos
+
+**Problema:** ISUS11 STOCK vem com institution: null (o CDR traz
+"Discussão BTG PACTUAL S/A").
+
+**Solução:** fallback para o nome do item quando institution ausente.
+
+#### 4.10 — Regressão de posições de investimento (2025-XX-XX)
+
+### Problema
+
+API de investments da Pluggy retorna campos inconsistentes por produto:
+
+- `value: null` com `balance` preenchido (ETF ISUS11)
+- `amount` divergente de `balance` (CDB: amount=2500, balance=2000 — dashboard exibe 2000)
+
+### Decisão de contrato
+
+Fonte de verdade do valor da posição é `balance`, nesta cascata:
+`balance` → `value` → `0.0`
+`amount` NUNCA é usado (pode divergir do que o banco exibe).
+
+### Verificação
+
+- `sync_all` já cumpria o contrato; bug não se materializou no nosso código.
+- Adicionados 4 testes de regressão em `tests/test_consolidacao.py`
+  (`TestValorPosicaoInvestimento`) para travar a cascata e a agregação
+  pós-cascata. Suite: 17 passed.
+- Se alguém reordenar a cascata, o CI acusa.
+
+### Campos do modelo `Position` (dataclass, não pydantic)
+
+`institution, account_type, asset_name, category, amount, updated_at`
+⚠️ Nome do ativo é `asset_name`, não `name`.
+
+### Lições aplicadas/reforçadas
+
+- 4.6: `cat` após colar pegou bloco que não tinha sido salvo na 1ª tentativa ✅
+- 4.7: introspecção (`__dataclass_fields__`) revelou o campo real em vez de adivinhar ✅
+- Testes escritos ANTES de verificar o código: como passaram de primeira,
+  confirmamos o contrato em vez de "corrigir" às cegas.
+
+### Próximo passo
+
+Fase 2: [descrever aqui]
+
 ## 5. Estado dos testes
 
 10 passed (pytest 9.2.0, Python 3.12.7):
 
-| Arquivo | Testes | O que cobre |
-|---|---:|---|
-| test_consolidacao.py | 2 | sync_all monta Snapshot; get_totals agrega por instituição |
-| test_pluggy.py | 6 | get_item, listas de accounts/investments/transactions, erro de API, token no header |
-| test_rentabilidade.py | 1 | cálculo de rentabilidade total |
-| test_scheduler.py | 1 | job "sync_weekly" registrado |
+| Arquivo               | Testes | O que cobre                                                                         |
+| --------------------- | -----: | ----------------------------------------------------------------------------------- |
+| test_consolidacao.py  |      2 | sync_all monta Snapshot; get_totals agrega por instituição                        |
+| test_pluggy.py        |      6 | get_item, listas de accounts/investments/transactions, erro de API, token no header |
+| test_rentabilidade.py |      1 | cálculo de rentabilidade total                                                     |
+| test_scheduler.py     |      1 | job "sync_weekly" registrado                                                        |
 
 Mocks: MagicMock (client fake) e pytest-mock instalado.
 
@@ -276,8 +356,8 @@ transações; precisa ser atualizado para a v2 (cursor/hasNext) — ver seção 
   de transação da v2: description, amount, date).
 - Edge cases de consolidacao: item sem connector, balance/value ausentes → 0.0,
   item só com contas ou só com investimentos.
-- Persistência: ligar sync_all ao snapshot_repository e testar ciclo salvar → ler
-  (usando :memory: ou tmp_path, nunca o banco de produção).
+- ~~Persistência: ligar sync_all ao snapshot_repository e testar ciclo salvar → ler
+  (usando :memory: ou tmp_path, nunca o banco de produção).~~
 - Teste de fumaça do dashboard: importar dashboard.Home num teste para pegar erros
   de import antes de abrir o navegador.
 - Cobertura: pytest-cov com --cov=app --cov-report=term-missing.
@@ -287,6 +367,21 @@ transações; precisa ser atualizado para a v2 (cursor/hasNext) — ver seção 
   interno, para o resto do app não depender do formato bruto da API.
 - Em produção: descomentar get_items(), remover dependência do item fixo,
   e revisar limites de paginação (limit?) na v2.
+
+### 7.1 — pendências
+
+- Integrar run_scheduled_sync ao snapshot_repository (persistir cada
+  execução).
+- Testes de regressão do bug de valor (ainda não criados):
+  test_investment_value_null_usa_balance e
+  test_investment_nao_usa_amount_quando_diverge_de_balance.
+- Decisões de produto em aberto: múltiplos items (feature flag?),
+  posições zeradas contam no total?, liabilities (cartões) separadas
+  do patrimônio.
+- Rentabilidade: campos rate/rateType/fixedAnnualRate (ex.: 150% CDI2,5% p.a.) e lastMonthRate/lastTwelveMonthsRate vêm de graça no
+  payload da Pluggy — usar antes de calcular de séries históricas.
+- Com snapshots diários + balance confiável, séries históricas reais
+  ficam viáveis para evolucao.py.
 
 ## 8. Convenções adotadas
 
@@ -302,4 +397,9 @@ transações; precisa ser atualizado para a v2 (cursor/hasNext) — ver seção 
   procurando em fóruns — o próprio erro costuma indicar o caminho.
 - cat no arquivo após colar código sugerido: detectar colagens desalinhadas
   antes de rodar.
-- Copiar
+- Valor de posição de investimento: sempre balance; nunca amount
+  (diverge no sandbox); value só como último recurso.
+- Atualizar CONTEXT.md é critério de done de cada fase, não tarefa
+  opcional.
+- Seção de "armadilhas conhecidas da API" é a mais valiosa do arquivo:
+  registrar todo comportamento não-documentado descoberto.

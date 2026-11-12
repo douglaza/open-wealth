@@ -1,40 +1,89 @@
-from collections import defaultdict
 from datetime import date
 
-from app.models.snapshot import Position, Snapshot
+from app.models.snapshot import Snapshot, Position
+
+
+def _connector_name(item: dict) -> str:
+    connector = item.get("connector") or {}
+    return connector.get("name") or "Desconhecido"
+
+
+def _build_positions(accounts: list, investments: list, institution: str) -> list:
+    """Monta positions a partir de contas (balance) e investimentos (value)."""
+    positions = []
+
+    for acc in accounts or []:
+        balance = acc.get("balance")
+        positions.append(
+            Position(
+                institution=institution,
+                account_type=acc.get("type") or "account",
+                asset_name=acc.get("name") or "Conta sem nome",
+                category=acc.get("subtype") or "cash",
+                amount=float(balance) if balance is not None else 0.0,
+            )
+        )
+
+    for inv in investments or []:
+        positions.append(
+            Position(
+                institution=institution,
+                account_type="investment",
+                asset_name=inv.get("name") or "Investimento sem nome",
+                category=inv.get("type") or "investment",
+                amount=_investment_amount(inv),
+            )
+        )
+
+
+    return positions
 
 
 def sync_all(client) -> Snapshot:
-    positions = []
-    items = client.get_items()          # <- agora retorna lista direta
+    """
+    Monta o Snapshot de posições.
 
-    for item in items:
-        institution = item.get("connector", {}).get("name", "Desconhecido")
-        item_id = item["id"]
+    Modo Development (sandbox): usa get_item() com o item fixo do .env.
+    Modo produção: reativar get_items() no cliente e iterar.
+    """
+    item = client.get_item()
+    institution = _connector_name(item)
 
-        for acc in client.get_accounts(item_id):
-            positions.append(Position(
-                institution=institution,
-                account_type=acc.get("type", "conta"),
-                asset_name=acc.get("name", ""),
-                category="Conta",
-                amount=acc.get("balance", 0.0),
-            ))
+    accounts = client.get_accounts(item["id"])
+    investments = client.get_investments(item["id"])
 
-        for inv in client.get_investments(item_id):
-            positions.append(Position(
-                institution=institution,
-                account_type="investimentos",
-                asset_name=inv.get("name", ""),
-                category=inv.get("type", "Investimento"),
-                amount=inv.get("value", 0.0),
-            ))
-
-    return Snapshot(snapshot_date=date.today(), positions=positions)
+    return Snapshot(
+        snapshot_date=date.today(),
+        positions=_build_positions(accounts, investments, institution),
+    )
 
 
 def get_totals(snapshot: Snapshot) -> dict:
-    by_inst = defaultdict(float)
+    """Total geral + agregação por instituição."""
+    by_institution: dict[str, float] = {}
     for p in snapshot.positions:
-        by_inst[p.institution] += p.amount
-    return {"total": snapshot.total, "institutions": dict(by_inst)}
+        by_institution[p.institution] = (
+            by_institution.get(p.institution, 0.0) + p.amount
+        )
+
+    return {
+        "total": sum(by_institution.values()),
+        "by_institution": by_institution,
+    }
+
+
+def _investment_amount(inv: dict) -> float:
+    """Valor de mercado da posição. 'balance' é a fonte da verdade —
+    'value' vem null em vários conectores e 'amount' pode divergir do
+    valor exibido no dashboard (ex.: CDR do sandbox: amount=2500, balance=2000)."""
+    balance = inv.get("balance")
+    if balance is not None:
+        return float(balance)
+    value = inv.get("value")
+    if value is not None:
+        return float(value)
+    qty, price = inv.get("quantity"), inv.get("price")
+    if qty is not None and price is not None:
+        return float(qty) * float(price)
+    return 0.0
+

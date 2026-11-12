@@ -11,12 +11,15 @@ from app.core.config import settings
 class PluggyClient:
     TOKEN_LIFETIME = 2 * 60 * 60 - 60  # tokens duram 2h; renovamos 1min antes
 
-    def __init__(self, client_id: str, client_secret: str, base_url: str = None,
-                 item_id: str = None):
-        self._client_id = client_id
-        self._client_secret = client_secret
-        self._base_url = base_url or settings.pluggy_base_url
-        self._item_id = item_id or getattr(settings, "pluggy_item_id", None)
+    def __init__(
+        self,
+        client_id: str | None = None,
+        client_secret: str | None = None,
+    ):
+        self._client_id = client_id or settings.pluggy_client_id
+        self._client_secret = client_secret or settings.pluggy_client_secret
+        self._base_url = settings.pluggy_base_url
+        self._item_id = getattr(settings, "pluggy_item_id", None)
         self._token = None
         self._token_expiry = 0
 
