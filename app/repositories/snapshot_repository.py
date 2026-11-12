@@ -49,6 +49,44 @@ class SnapshotRepository:
     def commit(self):
         self._conn.commit()
 
+    def ultimos_totais_por_data(self, n: int = 2) -> list[dict]:
+        rows = self._conn.execute(
+            """SELECT snapshot_date, SUM(amount) AS total
+               FROM snapshots
+               WHERE snapshot_date IN (
+                   SELECT DISTINCT snapshot_date FROM snapshots
+                   ORDER BY snapshot_date DESC LIMIT ?
+               )
+               GROUP BY snapshot_date
+               ORDER BY snapshot_date""",
+            (n,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def totais_por_instituicao_ultimas_datas(self) -> list[dict]:
+        rows = self._conn.execute("""
+            WITH datas AS (
+                SELECT DISTINCT snapshot_date FROM snapshots
+                ORDER BY snapshot_date DESC LIMIT 2
+            )
+            SELECT
+                (SELECT MAX(snapshot_date) FROM datas) AS data_atual,
+                (SELECT MIN(snapshot_date) FROM datas) AS data_anterior,
+                i.institution,
+                COALESCE(v1.total, 0)               AS valor_anterior,
+                COALESCE(v2.total, 0)               AS valor_atual
+            FROM (SELECT institution FROM snapshots GROUP BY institution) i
+            LEFT JOIN (SELECT institution, SUM(amount) total
+                       FROM snapshots
+                       WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM datas)
+                       GROUP BY institution) v2 ON i.institution = v2.institution
+            LEFT JOIN (SELECT institution, SUM(amount) total
+                       FROM snapshots
+                       WHERE snapshot_date = (SELECT MIN(snapshot_date) FROM datas)
+                       GROUP BY institution) v1 ON i.institution = v1.institution
+        """).fetchall()
+        return [dict(r) for r in rows]
+
 
 def save(snapshot: Snapshot):
     """Upsert do dia: apaga posições existentes e reinsere."""
