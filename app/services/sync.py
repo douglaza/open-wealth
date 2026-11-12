@@ -1,8 +1,7 @@
 """Sincroniza dados da Pluggy para o banco local e gera snapshots."""
 from datetime import date
-from app.core.database import get_connection
-from app.services.pluggy_client import PluggyClient
-from app.core.config import PLUGGY_CLIENT_ID, PLUGGY_CLIENT_SECRET
+from app.integrations.pluggy_client import PluggyClient
+from app.repositories.snapshot_repository import SnapshotRepository
 
 
 def _map_category(connector_type: str) -> str:
@@ -16,55 +15,32 @@ def _map_category(connector_type: str) -> str:
     return mapping.get(connector_type, "outros")
 
 
-def sync_weekly():
+def sync_weekly(client=None, repo=None):
     """Busca tudo na Pluggy e grava snapshot diário no banco."""
-    client = PluggyClient(PLUGGY_CLIENT_ID, PLUGGY_CLIENT_SECRET)
+    client = client or PluggyClient()
+    repo = repo or SnapshotRepository()
     hoje = date.today().isoformat()
-    conn = get_connection()
 
     for item in client.get_items():
         item_id = item["id"]
         institution = item.get("institution", "Desconhecida")
 
         # evita snapshot duplicado no mesmo dia
-        already = conn.execute(
-            "SELECT 1 FROM snapshots WHERE snapshot_date = ? AND institution = ?",
-            (hoje, institution),
-        ).fetchone()
-        if already:
+        if repo.snapshot_exists(hoje, institution):
             continue
 
         for acc in client.get_accounts(item_id):
-            conn.execute(
-                "INSERT INTO snapshots (snapshot_date, institution, account_type, asset_name, category, amount) "
-                "VALUES (?,?,?,?,?,?)",
-                (hoje, institution, acc.get("type", "outros"),
-                 acc.get("name", ""), _map_category(acc.get("type", "")),
-                 acc.get("balance", 0) or 0),
+            repo.save_snapshot_row(
+                hoje, institution, acc.get("type", "outros"),
+                acc.get("name", ""), _map_category(acc.get("type", "")),
+                acc.get("balance", 0) or 0,
             )
-            conn.execute(
-                """INSERT INTO accounts (id, item_id, name, type, balance, currency, updated_at)
-                   VALUES (?,?,?,?,?,?,?)
-                   ON CONFLICT(id) DO UPDATE SET
-                     balance=excluded.balance, updated_at=excluded.updated_at""",
-                (acc["id"], item_id, acc.get("name", ""), acc.get("type"),
-                 acc.get("balance", 0), acc.get("currency", "BRL"), hoje),
-            )
+            repo.upsert_account(acc, item_id, hoje)
 
         for inv in client.get_investments(item_id):
-            qty = inv.get("quantity") or 0
-            price = inv.get("price") or 0
-            conn.execute(
-                """INSERT INTO investments (id, item_id, name, type, quantity, price, value, updated_at)
-                   VALUES (?,?,?,?,?,?,?,?)
-                   ON CONFLICT(id) DO UPDATE SET
-                     quantity=excluded.quantity, price=excluded.price,
-                     value=excluded.value, updated_at=excluded.updated_at""",
-                (inv["id"], item_id, inv.get("name", ""), inv.get("type"),
-                 qty, price, qty * price, hoje),
-            )
+            repo.upsert_investment(inv, item_id, hoje)
 
-    conn.commit()
+    repo.commit()
     print(f"✅ Sync concluído em {hoje}")
 
 
