@@ -6,3 +6,4 @@ data/exports/
 .env
 .claude/
 .agents/
+tutorial/*
