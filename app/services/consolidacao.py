@@ -1,6 +1,7 @@
 from datetime import date
 
-from app.models.snapshot import Snapshot, Position
+# from app.models.snapshot import Snapshot, Position
+from app.domain.models import Snapshot, Position
 
 
 def _connector_name(item: dict) -> str:

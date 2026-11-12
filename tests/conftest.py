@@ -1,17 +1,14 @@
 # tests/conftest.py
 import pytest
-from app.core.database import get_connection
+
+from app.core.database import init_db
 
 
 @pytest.fixture(autouse=True)
-def banco_limpo():
-    conn = get_connection()
-    conn.execute("DELETE FROM snapshots")
-    conn.execute("DELETE FROM accounts")
-    conn.execute("DELETE FROM investments")
-    conn.commit()
+def banco_limpo(tmp_path, monkeypatch):
+    """Cada teste roda contra um banco SQLite novo e temporário."""
+    db_file = tmp_path / "test.db"
+    monkeypatch.setenv("OW_DB_PATH", str(db_file))
+    init_db()
     yield
-    conn.execute("DELETE FROM snapshots")
-    conn.execute("DELETE FROM accounts")
-    conn.execute("DELETE FROM investments")
-    conn.commit()
+    # nada a limpar: o arquivo morre com o tmp_path

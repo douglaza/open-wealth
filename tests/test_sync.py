@@ -1,4 +1,6 @@
-from app.services.sync import sync_weekly
+import pytest
+
+from app.services.sync import sync_weekly, _map_category
 
 
 class FakeClient:
@@ -21,6 +23,31 @@ class FakeRepo:
     def upsert_account(self, acc, item_id, d): self.accounts.append((acc, item_id))
     def upsert_investment(self, inv, item_id, d): self.investments.append((inv, item_id))
     def commit(self): self.committed = True
+
+
+@pytest.mark.parametrize("raw,esperado", [
+    ("CHECKING", "banco"),
+    ("SAVINGS", "banco"),
+    ("CREDIT", "cartao"),
+    ("investment", "investimento"),
+    ("INVESTMENT", "outros"),   # suspeito: documenta comportamento atual
+    ("qualquercoisa", "outros"),
+])
+def test_map_category(raw, esperado):
+    assert _map_category(raw) == esperado
+
+
+class ExplodingClient(FakeClient):
+    def get_items(self):
+        raise RuntimeError("API fora do ar")
+
+
+def test_sync_client_error_propagates_sem_commit():
+    repo = FakeRepo()
+    with pytest.raises(RuntimeError):
+        sync_weekly(client=ExplodingClient(), repo=repo)
+    assert not repo.committed      # nada parcial foi persistido
+    assert repo.rows == [] and repo.accounts == []
 
 
 def test_sync_flows_through_dependencies():

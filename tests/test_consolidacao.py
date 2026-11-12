@@ -117,3 +117,11 @@ class TestValorPosicaoInvestimento:
 
         assert totals["by_institution"]["BANCO BTG PACTUAL S/A"] == 2150.0
         assert totals["total"] == 2150.0
+
+
+def test_cartao_negativo_e_dívida():
+    snapshot = sync_all(_fake_client())
+    cartao = [p for p in snapshot.positions if p.account_type == "CREDIT"][0]
+    assert cartao.amount == -1006.2        # dívida preservada, não clampada
+    patrimonios = [p for p in snapshot.positions if p.account_type != "CREDIT"]
+    assert all(p.amount >= 0 for p in patrimonios)

@@ -1,18 +1,10 @@
-import sqlite3
-from pathlib import Path
-from app.core.config import DATABASE_URL
-import os
-
-
-# app/core/database.py
 import os
 import sqlite3
 from pathlib import Path
+
 from app.core.config import DATABASE_URL
 
 _DEFAULT_PATH = DATABASE_URL.replace("sqlite:///", "")
-
-DB_PATH = os.environ.get("OW_DB_PATH", DATABASE_URL.replace("sqlite:///", ""))
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS items (
@@ -81,15 +73,6 @@ FROM snapshots GROUP BY snapshot_date, category;
 """
 
 
-# app/core/database.py
-import os
-import sqlite3
-from pathlib import Path
-from app.core.config import DATABASE_URL
-
-_DEFAULT_PATH = DATABASE_URL.replace("sqlite:///", "")
-
-
 def _db_path() -> str:
     return os.environ.get("OW_DB_PATH", _DEFAULT_PATH)
 
@@ -107,3 +90,5 @@ def init_db():
         conn.executescript(SCHEMA)
     print(f"✅ Banco pronto em: {_db_path()}")
 
+# SCHEMA permanece exatamente como está — não colado aqui só para economizar espaço.
+# Apague os blocos duplicados de imports e o DB_PATH morto.
