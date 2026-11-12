@@ -1,3 +1,7 @@
+"""DEPRECATED: use app.domain.models. Mantido até o fim da Fase 2."""
+from app.domain.models import Position, Snapshot  # noqa: F401
+
+
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
