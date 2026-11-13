@@ -1,19 +1,22 @@
+
 # Open Wealth
 
 MVP em Python para consolidar patrimônio pessoal a partir dos dados da Pluggy.
 O projeto contém um cliente para a API Pluggy, lógica de consolidação em
-snapshots, persistência SQLite, visualizações Streamlit e uma API FastAPI em
-desenvolvimento.
+snapshots, persistência SQLite, API FastAPI e visualizações Streamlit.
 
 > **Estado do MVP:** os componentes principais e suas regras de negócio têm
-> testes automatizados, mas a execução ponta a ponta ainda não está concluída.
-> As limitações atuais da API e da sincronização estão descritas abaixo.
+> testes automatizados, e o ciclo de sincronização ponta a ponta já persiste
+> snapshots reais no banco. As limitações restantes estão descritas abaixo.
 
 ## Tutorial
 
-Veja o [tutorial da Fase 1](tutorial/ow1_mvp.html) para uma explicação visual
-da arquitetura, do fluxo de consolidação, da regra de valoração de investimentos,
-do repositório de snapshots e dos testes de regressão.
+- [Tutorial da Fase 1](tutorial/ow1_mvp.html) — arquitetura, fluxo de
+  consolidação, regra de valoração de investimentos, repositório de snapshots
+  e testes de regressão.
+- [Tutorial da Fase 2](tutorial/ow2_fase2.html) — API de sincronização,
+  persistência com schema autoconstruído, idempotência diária e log
+  estruturado.
 
 ## Funcionalidades implementadas
 
@@ -21,13 +24,21 @@ do repositório de snapshots e dos testes de regressão.
 - Consulta de transações pela API v2 da Pluggy, com paginação por cursor.
 - Consolidação do item configurado em um `Snapshot` diário.
 - Cálculo de totais gerais e por instituição.
-- Persistência de snapshots no SQLite, com consulta do mais recente e por
-  período.
+- Persistência de snapshots no SQLite, com schema autoconstruído na
+  instanciação do repositório (`CREATE TABLE IF NOT EXISTS` + migração
+  incremental).
+- **Idempotência diária:** rodar o sync duas vezes no mesmo dia não duplica
+  dados — o snapshot existente é pulado sem nova chamada à API.
+- Endpoint `POST /api/v1/sync` que dispara o ciclo Pluggy → posições → banco
+  e responde `202 Accepted`.
+- Log estruturado em JSON com eventos nomeados por etapa do sync
+  (`sync_started`, `sync_data_fetched`, `snapshot_saved`, `snapshot_skipped`).
 - Dashboard Streamlit para visualizar snapshots, patrimônio, investimentos e
   evolução.
 - Scheduler configurado para executar às segundas-feiras às 06:00, no fuso
   `America/Sao_Paulo`.
-- 17 testes automatizados, incluindo regressões da valoração de investimentos.
+- 17 testes automatizados, incluindo regressões da valoração de investimentos
+  e dedup diária do repositório contra SQLite real.
 
 ### Regra de valoração dos investimentos
 
@@ -44,12 +55,22 @@ instituição. O valor resolvido pela cascata é usado na agregação patrimonia
 ## Arquitetura
 
 ```text
+POST /api/v1/sync
+        ↓
+   sync_weekly(client, repo)
+        ↓
 Pluggy API → PluggyClient → sync_all → Snapshot
                                       ↓
                          SnapshotRepository ↔ SQLite
+                                (dedup por dia)
 
                  FastAPI e dashboard Streamlit
 ```
+
+O endpoint não contém regra de negócio: monta as dependências
+(PluggyClient, SnapshotRepository) e delega ao sync_weekly. A dedup
+diária vive no repositório, então qualquer chamador (endpoint, scheduler,
+teste) herda a garantia.
 
 O cliente e a consolidação trabalham com um item por vez, usando
 `PLUGGY_ITEM_ID` no modo Development da Pluggy. A listagem de itens está
@@ -66,8 +87,8 @@ app/
 dashboard/         # aplicação Streamlit e páginas
 data/              # banco SQLite e exports
 tests/             # testes unitários e de persistência
-tutorial/          # tutorial visual da Fase 1
-main.py            # aplicação FastAPI (em desenvolvimento)
+tutorial/          # tutoriais visuais das Fases 1 e 2
+main.py            # aplicação FastAPI
 ```
 
 ## Requisitos
@@ -107,10 +128,42 @@ Execute a suíte a partir da raiz do projeto:
 pytest -q
 ```
 
-A suíte atual tem **17 testes**. As chamadas HTTP à Pluggy são simuladas; os
-testes não precisam de credenciais nem acessam o banco de produção.
+A suíte atual tem 17 testes. As chamadas HTTP à Pluggy são simuladas; os
+testes de repositório rodam contra SQLite em banco temporário, sem acessar o
+banco de produção.
 
 ## Executar as aplicações
+
+### API
+
+```bash
+uvicorn main:app --reload
+```
+
+Rotas disponíveis:
+
+- `GET /health` — verificação de disponibilidade.
+- `POST /api/v1/sync` — dispara o sync; responde `202 Accepted` e grava o
+  snapshot do dia (ou pula se já existir).
+
+Disparo manual do sync:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/sync
+```
+
+Na primeira chamada do dia, o log mostra
+`sync_started → sync_data_fetched → snapshot_saved`. Nas seguintes,
+`snapshot_skipped` confirma a idempotência.
+
+Verificação direta do banco:
+
+```bash
+sqlite3 data/database.db "SELECT asset_name, category, amount FROM snapshots;"
+```
+
+⚠️ Se remover `data/database.db` manualmente, reinicie o servidor: o
+`--reload` do uvicorn pode manter conexões abertas com o arquivo antigo.
 
 ### Dashboard
 
@@ -118,33 +171,24 @@ testes não precisam de credenciais nem acessam o banco de produção.
 streamlit run dashboard/Home.py
 ```
 
-O dashboard lê a tabela `snapshots`; portanto, precisa de um banco inicializado
-e de snapshots persistidos para exibir dados.
-
-### API
-
-A API FastAPI define as rotas `GET /health` e `GET /patrimonio`. O comando
-previsto para iniciá-la é:
-
-```bash
-uvicorn main:app --reload
-```
-
-**A API ainda não inicia no estado atual:** `main.py` importa `get_all`, que não
-existe em `app.repositories.snapshot_repository`. A consulta correspondente
-precisa ser implementada antes de executar a API.
+O dashboard lê a tabela `snapshots`; portanto, precisa de um banco
+inicializado e de snapshots persistidos para exibir dados. Rode o sync
+(`POST /api/v1/sync`) ao menos uma vez antes de abrir.
 
 ## Limitações conhecidas
 
-- A sincronização agendada ainda não está ligada ao fluxo atual de
-  `sync_all`/`SnapshotRepository`. O serviço `sync_weekly` chama
-  `get_items()`, mas esse método está desabilitado no cliente e a listagem
-  retorna `401` no modo Development.
-- `PLUGGY_ITEM_ID` permite obter o item e consolidá-lo pelo fluxo manual de
-  `sync_all`, mas o job semanal ainda precisa ser adaptado para usar esse item e
-  persistir o snapshot.
-- A rota `/patrimonio` depende da implementação pendente de `get_all` citada
-  acima.
+- O scheduler semanal ainda não está ligado ao fluxo de
+  `sync_weekly`/`SnapshotRepository`; hoje o sync é disparado manualmente via
+  `POST /api/v1/sync`. O job precisa ser adaptado para reutilizar o item
+  configurado em `PLUGGY_ITEM_ID`.
+- A listagem de itens (`get_items()`) retorna 401 no modo Development da
+  Pluggy; o fluxo usa o item único configurado por variável de ambiente.
+- As credenciais da Pluggy ainda são montadas dentro do endpoint; a migração
+  para variáveis de ambiente injetadas está pendente.
+- Não há endpoints de leitura (`GET /api/v1/snapshots`) nem rotas de
+  rentabilidade/evolução — previstos para a Fase 3.
+- Não há retry com backoff nas chamadas à Pluggy nem tratamento de
+  timeout explícito.
 - O suporte atual é orientado a um item Pluggy; múltiplos itens e a integração
   completa do dashboard ainda são evoluções futuras.
 
@@ -152,3 +196,19 @@ precisa ser implementada antes de executar a API.
 
 Python · Pluggy API · SQLite · FastAPI · Streamlit · Pandas · APScheduler ·
 pytest
+
+**Principais mudanças em relação à versão anterior:**
+
+1. **Estado do MVP** — deixou de dizer que a execução ponta a ponta "não está
+   concluída"; agora o sync persiste de verdade.
+2. **Novas funcionalidades** — schema autoconstruído, idempotência diária,
+   `POST /api/v1/sync` (202) e log estruturado.
+3. **Arquitetura** — o diagrama agora mostra o fluxo a partir do endpoint.
+4. **Seção API** — substitui o aviso "a API ainda não inicia" pelas rotas
+   funcionais e pelo exemplo de `curl`.
+5. **Limitações** — removidas as três limitações resolvidas (sync órfão,
+   `get_all` inexistente, item não persistido) e adicionadas as pendências reais
+   da Fase 3 (endpoints de leitura, credenciais em env, retry, scheduler ligado).
+
+> Ajuste o caminho do tutorial da Fase 2 (`tutorial/ow2_fase2.html`) se o nome
+> do arquivo for outro.

@@ -101,7 +101,7 @@ e pluggy_item_id (usado no modo Development; ver 4.6).
 ### 4.1. Refatoração: pastas órfãs e imports quebrados
 
 **Problema:** durante a evolução, módulos foram movidos/renomeados e restou código
-  referenciando caminhos antigos:
+referenciando caminhos antigos:
 
 - app.services.consolidacao importava app.integrations.pluggy
   (accounts/investments), que não existia mais.
@@ -271,29 +271,29 @@ o porquê.
 Campos com mesmo nome têm semântica diferente por type de
 investimento.
 
-### 4.9.Instituição null em investimentos
+### 4.9. Instituição null em investimentos
 
 **Problema:** ISUS11 STOCK vem com institution: null (o CDR traz
 "Discussão BTG PACTUAL S/A").
 
 **Solução:** fallback para o nome do item quando institution ausente.
 
-#### 4.10 — Regressão de posições de investimento (2025-XX-XX)
+### 4.10. Regressão de posições de investimento (2025-XX-XX)
 
-### Problema
+#### Problema
 
 API de investments da Pluggy retorna campos inconsistentes por produto:
 
 - `value: null` com `balance` preenchido (ETF ISUS11)
 - `amount` divergente de `balance` (CDB: amount=2500, balance=2000 — dashboard exibe 2000)
 
-### Decisão de contrato
+#### Decisão de contrato
 
 Fonte de verdade do valor da posição é `balance`, nesta cascata:
 `balance` → `value` → `0.0`
 `amount` NUNCA é usado (pode divergir do que o banco exibe).
 
-### Verificação
+#### Verificação
 
 - `sync_all` já cumpria o contrato; bug não se materializou no nosso código.
 - Adicionados 4 testes de regressão em `tests/test_consolidacao.py`
@@ -301,19 +301,19 @@ Fonte de verdade do valor da posição é `balance`, nesta cascata:
   pós-cascata. Suite: 17 passed.
 - Se alguém reordenar a cascata, o CI acusa.
 
-### Campos do modelo `Position` (dataclass, não pydantic)
+#### Campos do modelo `Position` (dataclass, não pydantic)
 
 `institution, account_type, asset_name, category, amount, updated_at`
 ⚠️ Nome do ativo é `asset_name`, não `name`.
 
-### Lições aplicadas/reforçadas
+#### Lições aplicadas/reforçadas
 
 - 4.6: `cat` após colar pegou bloco que não tinha sido salvo na 1ª tentativa ✅
 - 4.7: introspecção (`__dataclass_fields__`) revelou o campo real em vez de adivinhar ✅
 - Testes escritos ANTES de verificar o código: como passaram de primeira,
   confirmamos o contrato em vez de "corrigir" às cegas.
 
-### Próximo passo
+#### Próximo passo
 
 Fase 2: [descrever aqui]
 
@@ -321,12 +321,12 @@ Fase 2: [descrever aqui]
 
 10 passed (pytest 9.2.0, Python 3.12.7):
 
-| Arquivo               | Testes | O que cobre                                                                         |
-| --------------------- | -----: | ----------------------------------------------------------------------------------- |
-| test_consolidacao.py  |      2 | sync_all monta Snapshot; get_totals agrega por instituição                        |
+| Arquivo               | Testes | O que cobre                                                                          |
+|-----------------------|-------:|--------------------------------------------------------------------------------------|
+| test_consolidacao.py  |      2 | sync_all monta Snapshot; get_totals agrega por instituição                           |
 | test_pluggy.py        |      6 | get_item, listas de accounts/investments/transactions, erro de API, token no header |
-| test_rentabilidade.py |      1 | cálculo de rentabilidade total                                                     |
-| test_scheduler.py     |      1 | job "sync_weekly" registrado                                                        |
+| test_rentabilidade.py |      1 | cálculo de rentabilidade total                                                      |
+| test_scheduler.py     |      1 | job "sync_weekly" registrado                                                         |
 
 Mocks: MagicMock (client fake) e pytest-mock instalado.
 
@@ -403,3 +403,95 @@ transações; precisa ser atualizado para a v2 (cursor/hasNext) — ver seção 
   opcional.
 - Seção de "armadilhas conhecidas da API" é a mais valiosa do arquivo:
   registrar todo comportamento não-documentado descoberto.
+
+
+## 9. Fase 2 — API (FastAPI) e persistência de snapshots
+
+### 9.1. Arquitetura da camada API
+
+```text
+app/api/
+├── main.py        # FastAPI app, router include, lifespan opcional
+└── routers/       # endpoints /api/v1/sync, snapshot, etc.
+```
+
+Banco: data/database.db (SQLite), schema criado automaticamente.
+
+Fluxo do sync: POST /api/v1/sync → sync_weekly(client, repo) →
+Pluggy → posições → SnapshotRepository.upsert_snapshot → 202 Accepted.
+
+Log estruturado em JSON (time/level/module/event) com eventos:
+sync_started, sync_data_fetched, snapshot_saved, snapshot_skipped.
+
+### 9.2. Repositório de snapshots
+
+upsert_snapshot(snapshot, snapshot_date):
+
+- snapshot_exists(date) → se já há snapshot do dia, pula (idempotência).
+- Persiste posições em tabela snapshots com asset_name, category,
+  amount, e metadados de contas em accounts.
+- commit() explícito ao final; rollback recomendado em falhas parciais
+  (ver 9.4 — pendência).
+- _ensure_schema() chamado no __init__ do repositório: cria tabelas
+  se não existirem (DDL idempotente), além de _migrate_schema() para
+  evoluções incrementais.
+
+### 9.3. Idempotência do sync — validada
+
+Segunda chamada ao POST /api/v1/sync no mesmo dia loga
+snapshot_skipped e retorna 202 sem tocar na API Pluggy.
+
+202 em ambos os casos (synced ou skipped) — se precisar distinguir na
+resposta, fazer o endpoint retornar {"status": "synced"|"skipped", ...}.
+
+⚠️ Apagar data/database.db enquanto o uvicorn --reload está rodando
+funciona (SQLite recria na próxima conexão), mas o processo antigo pode
+segurar conexões — preferir reiniciar o server após rm.
+
+### 9.4. Pendências conhecidas (da Fase 2)
+
+- Transação atômica no sync: se falhar no meio do loop de inserts,
+  não há rollback garantido — envolver com try/except +
+  self._conn.rollback() no repositório.
+- Type hint inconsistente: upsert_snapshot(snapshot_date: date) repassa
+  direto para upsert_item que espera str — padronizar com .isoformat().
+- Divergência histórica de totais (R
+  42.695
+  ,
+  23
+  v
+  s
+  R
+  42.695,23vsR 32.695,23) era
+  resíduo do banco antigo antes do reset — resolvido, mas reforça: sempre
+  validar soma de snapshots contra posições após reset do banco.
+
+### 9.5. Verificação ponta a ponta (sandbox, 2025-11-13)
+
+POST /api/v1/sync → 202, snapshot_saved (2 contas, 8 investimentos)
+
+POST /api/v1/sync → 202, snapshot_skipped (idempotente)
+
+sqlite3: snapshots = Conta Corrente 43701.43 (banco) |
+Mastercard Black -1006.20 (cartao) → total 32695.23 ✅
+
+#### Lições da Fase 2
+
+- Idempotência por data no repositório é mais simples e robusta do que
+  dedup na camada de serviço.
+- Criar schema no __init__ do repositório elimina a classe de bugs
+  "tabela não existe" em banco novo — mas exige mocks de teste cientes disso.
+- Distinguir synced/skipped no corpo da resposta desde o início evita
+  retrabalho em quem consome a API (dashboards, scheduler).
+
+E na seção 7. Próximos passos, sugiro atualizar as linhas resolvidas:
+
+- ~~Integrar run_scheduled_sync ao snapshot_repository~~ ✅ Fase 2
+- ~~Testes de regressão do bug de valor~~ ✅ (17 passed)
+
+E adicionar como próximos passos da Fase 3:
+
+- Rollback/transação no sync (9.4).
+- Testes do sync_weekly + SnapshotRepository com tmp_path/:memory:.
+- Retorno do endpoint distinguindo synced vs skipped.
+- Scheduler chamando o sync diariamente (cron ou APScheduler).

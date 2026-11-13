@@ -7,3 +7,4 @@ data/exports/
 .claude/
 .agents/
 tutorial/*
+!tutorial/arquitetura.md
