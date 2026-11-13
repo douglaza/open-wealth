@@ -25,9 +25,33 @@ class FakeClient:
         return []
 
 
+from app.domain.models import Snapshot, Position  # ajuste o import ao seu caminho real
+
+
 class FakeRepo:
     def __init__(self):
         self.calls = []
+        self.posicoes = [
+            Position(
+                institution="Nubank",
+                amount=70.0,
+                account_type="ACCOUNT",       # use whatever values your model expects
+                asset_name="Conta Nubank",
+                category="CASH",
+            ),
+            Position(
+                institution="Inter",
+                amount=40.0,
+                account_type="ACCOUNT",
+                asset_name="Conta Inter",
+                category="CASH",
+            ),
+        ]
+
+    def get_latest(self):
+        if not self.posicoes:
+            return None
+        return Snapshot(snapshot_date=date(2025, 1, 2), positions=self.posicoes)
 
     def snapshot_exists(self, snapshot_date, institution):
         return False
@@ -123,3 +147,48 @@ class FakeRepoVazio(FakeRepo):
 
     def totais_por_instituicao_ultimas_datas(self):
         return []
+
+
+def test_carteira_retorna_total(client):
+    tc, _ = client
+    resp = tc.get("/api/v1/carteira")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 110.0
+    assert body["snapshot_date"] == "2025-01-02"
+
+
+def test_carteira_posicoes(client):
+    tc, _ = client
+    resp = tc.get("/api/v1/carteira/posicoes")
+    assert resp.status_code == 200
+    assert len(resp.json()["positions"]) == 2
+
+
+def test_carteira_instituicoes_ordenado_desc(client):
+    tc, _ = client
+    resp = tc.get("/api/v1/carteira/instituicoes")
+    body = resp.json()
+    assert body[0] == {"institution": "Nubank", "total": 70.0}
+
+
+def test_carteira_alocacao_soma_100(client):
+    tc, _ = client
+    resp = tc.get("/api/v1/carteira/alocacao")
+    body = resp.json()
+    assert round(sum(item["pct"] for item in body), 2) == 100.0
+    assert body[0]["pct"] == 63.64  # 70/110
+
+
+def test_carteira_vazia_retorna_msg(client):
+    tc, _ = client
+
+    class RepoSemSnapshot(FakeRepo):
+        def __init__(self):
+            super().__init__()
+            self.posicoes = []
+
+    tc.app.dependency_overrides[get_repo] = lambda: RepoSemSnapshot()
+    for rota in ("/carteira", "/carteira/posicoes",
+                 "/carteira/instituicoes", "/carteira/alocacao"):
+        assert "msg" in tc.get(f"/api/v1{rota}").json()

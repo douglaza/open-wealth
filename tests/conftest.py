@@ -1,13 +1,14 @@
 import pytest
 from app.core.database import init_db
 
-
-@pytest.fixture()
-def tmp_db(tmp_path, monkeypatch):
-    monkeypatch.setenv("OW_DB_PATH", str(tmp_path / "test.db"))
+@pytest.fixture(autouse=True)
+def banco_limpo(tmp_path, monkeypatch):
+    db_file = tmp_path / "test.db"
+    monkeypatch.setenv("OW_DB_PATH", str(db_file))
+    import app.core.database as db_mod
+    monkeypatch.setattr(db_mod, "_conn", None, raising=False)  # reseta cache, se existir
     init_db()
     yield
-
 
 
 @pytest.fixture(autouse=True)
@@ -17,4 +18,7 @@ def banco_limpo(tmp_path, monkeypatch):
     monkeypatch.setenv("OW_DB_PATH", str(db_file))
     init_db()
     yield
-    # nada a limpar: o arquivo morre com o tmp_path
+
+
+# tmp_db = banco_limpo
+
