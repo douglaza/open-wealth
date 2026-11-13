@@ -115,6 +115,24 @@ def test_sync_pluggy_error_vira_502(client):
     assert resp.json()["detail"] == "Falha ao consultar o Pluggy"
 
 
+def test_sync_erro_ao_criar_cliente_pluggy(mocker):
+    repo = FakeRepo()
+    app = create_app()
+    app.dependency_overrides[get_repo] = lambda: repo
+    mocker.patch(
+        "app.integrations.pluggy_client.PluggyClient",
+        side_effect=PluggyError("boom"),
+    )
+
+    resp = TestClient(app).post("/api/v1/sync")
+
+    assert resp.status_code == 502
+    assert resp.json() == {
+        "detail": "Falha ao consultar o Pluggy",
+        "error": "boom",
+    }
+
+
 def test_rentabilidade_total(client):
     tc, _ = client
     resp = tc.get("/api/v1/rentabilidade/total")

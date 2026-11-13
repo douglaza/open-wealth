@@ -124,7 +124,7 @@ def test_sync_skips_existing_snapshot():
     assert repo.calls == [("commit",)]  # só commit, nada gravado
 
 
-def test_sync_weekly_com_sqlite_real(tmp_db, mocker):
+def test_sync_weekly_com_sqlite_real(banco_limpo, mocker):
     mocker.patch(
         "app.services.sync._map_category",
         return_value="Conta",

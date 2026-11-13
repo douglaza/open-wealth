@@ -91,7 +91,7 @@ def get_posicoes(repo: SnapshotRepository = Depends(get_repo)):
         return {"msg": "Nenhum snapshot disponível. Execute /sync primeiro."}
     return {
         "snapshot_date": snapshot.snapshot_date.isoformat(),
-        "positions": [p.model_dump() for p in snapshot.positions],
+        "positions": [p.model_dump(exclude={"updated_at"}) for p in snapshot.positions],
     }
 
 
