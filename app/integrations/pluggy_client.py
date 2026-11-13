@@ -2,11 +2,16 @@
 Cliente da API Pluggy (https://pluggy.ai).
 Docs: https://pluggy.readme.io/reference
 """
+import logging
 import time
 import requests
 
-# from app.core.config import settings
 from app.core.config import Settings
+from app.core.exceptions import PluggyError
+
+
+logger = logging.getLogger(__name__)
+
 
 class PluggyClient:
 
@@ -19,7 +24,7 @@ class PluggyClient:
         settings: Settings | None = None,
     ):
         if settings is None and (client_id is None or client_secret is None):
-            from app.core.config import settings as _s  # fallback p/ produção
+            from app.core.config import settings as _s
             settings = _s
         s = settings
         self._client_id = client_id or (s.pluggy_client_id if s else "")
@@ -29,22 +34,27 @@ class PluggyClient:
         self._token = None
         self._token_expiry = 0
 
-
     # ---------- auth ----------
 
     def _authenticate(self) -> str:
-        resp = requests.post(
-            f"{self._base_url}/auth",
-            json={
-                "clientId": self._client_id,
-                "clientSecret": self._client_secret,
-            },
-            headers={"accept": "application/json"},
-            timeout=30,
-        )
-        if resp.status_code != 200:
-            print("AUTH ERROR:", resp.status_code, resp.text)
-        resp.raise_for_status()
+        try:
+            resp = requests.post(
+                f"{self._base_url}/auth",
+                json={
+                    "clientId": self._client_id,
+                    "clientSecret": self._client_secret,
+                },
+                headers={"accept": "application/json"},
+                timeout=30,
+            )
+            resp.raise_for_status()
+        except requests.HTTPError as e:
+            status = e.response.status_code if e.response is not None else "?"
+            body = e.response.text[:200] if e.response is not None else ""
+            raise PluggyError(f"Auth falhou: {status} {body}") from e
+        except requests.RequestException as e:
+            raise PluggyError("Falha de rede na autenticação") from e
+
         self._token = resp.json()["apiKey"]
         self._token_expiry = time.time() + self.TOKEN_LIFETIME
         return self._token
@@ -54,19 +64,26 @@ class PluggyClient:
             return self._authenticate()
         return self._token
 
+
     # ---------- http core ----------
 
     def _get(self, path: str, params: dict = None) -> dict:
-        resp = requests.get(
-            f"{self._base_url}{path}",
-            headers={"X-API-KEY": self._get_token()},
-            params=params or {},
-            timeout=30,
-        )
-        if resp.status_code != 200:
-            print("GET ERROR:", resp.status_code, resp.text)
-        resp.raise_for_status()
+        try:
+            resp = requests.get(
+                f"{self._base_url}{path}",
+                headers={"X-API-KEY": self._get_token()},
+                params=params or {},
+                timeout=30,
+            )
+            resp.raise_for_status()
+        except requests.HTTPError as e:
+            status = e.response.status_code if e.response is not None else "?"
+            raise PluggyError(f"Pluggy respondeu {status} em {path}") from e
+        except requests.RequestException as e:
+            raise PluggyError(f"Falha de rede ao chamar {path}") from e
+
         return resp.json()
+
 
     @staticmethod
     def _extract_results(data) -> list:

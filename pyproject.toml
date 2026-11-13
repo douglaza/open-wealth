@@ -1,2 +1,9 @@
-[tool.pytest.ini_options]
-addopts = "--cov=app --cov-report=term-missing --cov-fail-under=95"
+# [tool.pytest.ini_options]
+# addopts = "--cov=app --cov-report=term-missing --cov-fail-under=95"
+
+[tool.coverage.report]
+fail_under = 95
+
+[tool.coverage.report.coverage]
+# ou, se quiser isentar módulos quando rodar subsets:
+exclude_also = []
