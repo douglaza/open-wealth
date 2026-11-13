@@ -6,5 +6,5 @@ data/exports/
 .env
 .claude/
 .agents/
-tutorial/*
-!tutorial/arquitetura.md
+docs/*
+!docs/arquitetura.md
