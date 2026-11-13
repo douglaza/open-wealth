@@ -89,18 +89,32 @@ class SnapshotRepository:
         ).fetchall()
         return self._rows_to_snapshots(rows)
 
-    def get_between(self, inicio: str | None, fim: str | None) -> list[Snapshot]:
+    def get_between(self, inicio: str | date | None, fim: str | date | None) -> list[Snapshot]:
         query = "SELECT * FROM snapshots WHERE 1=1"
         params: list = []
         if inicio:
             query += " AND snapshot_date >= ?"
-            params.append(inicio)
+            params.append(inicio if isinstance(inicio, str) else inicio.isoformat())
         if fim:
             query += " AND snapshot_date <= ?"
-            params.append(fim)
+            params.append(fim if isinstance(fim, str) else fim.isoformat())
         query += " ORDER BY snapshot_date"
         rows = self._conn.execute(query, params).fetchall()
         return self._rows_to_snapshots(rows)
+
+
+    # def get_between(self, inicio: str | None, fim: str | None) -> list[Snapshot]:
+    #     query = "SELECT * FROM snapshots WHERE 1=1"
+    #     params: list = []
+    #     if inicio:
+    #         query += " AND snapshot_date >= ?"
+    #         params.append(inicio)
+    #     if fim:
+    #         query += " AND snapshot_date <= ?"
+    #         params.append(fim)
+    #     query += " ORDER BY snapshot_date"
+    #     rows = self._conn.execute(query, params).fetchall()
+    #     return self._rows_to_snapshots(rows)
 
     def ultimos_totais_por_data(self, n: int = 2) -> list[dict]:
         rows = self._conn.execute(
