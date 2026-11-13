@@ -2,47 +2,39 @@
 from datetime import date
 from app.integrations.pluggy_client import PluggyClient
 from app.repositories.snapshot_repository import SnapshotRepository
-
-
-def _map_category(connector_type: str) -> str:
-    """Mapeia tipos da Pluggy para nossas categorias."""
-    mapping = {
-        "CHECKING": "banco",
-        "SAVINGS": "banco",
-        "CREDIT": "cartao",
-        "investment": "investimento",
-    }
-    return mapping.get(connector_type, "outros")
+from app.services.consolidacao import _map_category
 
 
 def sync_weekly(client=None, repo=None):
-    """Busca tudo na Pluggy e grava snapshot diário no banco."""
-    client = client or PluggyClient()
-    repo = repo or SnapshotRepository()
+    """Busca dados da Pluggy (modo item-único) e grava snapshot diário."""
     hoje = date.today().isoformat()
+    client = client or PluggyClient()
+    item = client.get_item()
+    item_id = item["id"]
 
-    for item in client.get_items():
-        item_id = item["id"]
-        institution = item.get("institution", "Desconhecida")
+    repo = repo or SnapshotRepository()
+    institution = item.get("connector", {}).get("name") or item.get("institution") or "Desconhecida"
 
-        # evita snapshot duplicado no mesmo dia
-        if repo.snapshot_exists(hoje, institution):
-            continue
+    if repo.snapshot_exists(hoje, institution):
+        repo.commit()
+        return
 
-        for acc in client.get_accounts(item_id):
-            repo.save_snapshot_row(
-                hoje, institution, acc.get("type", "outros"),
-                acc.get("name", ""), _map_category(acc.get("type", "")),
-                acc.get("balance", 0) or 0,
-            )
-            repo.upsert_account(acc, item_id, hoje)
+    repo.upsert_item(item, hoje)   # <-- NOVO: garante o pai antes dos filhos
+    for acc in client.get_accounts(item_id):
+        category = _map_category(acc)          # ← use a função correta, não o mapa antigo
+        repo.save_snapshot_row(
+            hoje, institution, acc.get("type", "outros"),
+            acc.get("name", ""), category,
+            acc.get("balance", 0) or 0,
+        )
+        repo.upsert_account(acc, item_id, hoje)
 
-        for inv in client.get_investments(item_id):
-            repo.upsert_investment(inv, item_id, hoje)
+    for inv in client.get_investments(item_id):
+        repo.upsert_investment(inv, item_id, hoje)
 
     repo.commit()
-    print(f"✅ Sync concluído em {hoje}")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sync_weekly()
+

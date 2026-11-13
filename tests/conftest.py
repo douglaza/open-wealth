@@ -1,7 +1,13 @@
-# tests/conftest.py
 import pytest
-
 from app.core.database import init_db
+
+
+@pytest.fixture()
+def tmp_db(tmp_path, monkeypatch):
+    monkeypatch.setenv("OW_DB_PATH", str(tmp_path / "test.db"))
+    init_db()
+    yield
+
 
 
 @pytest.fixture(autouse=True)

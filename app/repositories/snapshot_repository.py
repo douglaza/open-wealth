@@ -2,7 +2,6 @@
 from app.core.database import get_connection
 
 from datetime import date
-# from app.models.snapshot import Position, Snapshot
 from app.domain.models import Position, Snapshot
 
 
@@ -141,3 +140,10 @@ class SnapshotRepository:
                        GROUP BY institution) v1 ON i.institution = v1.institution
         """).fetchall()
         return [dict(r) for r in rows]
+
+    def upsert_item(self, item: dict, snapshot_date: str):
+        self._conn.execute(
+            """INSERT INTO items (id, institution, updated_at) VALUES (?,?,?)
+            ON CONFLICT(id) DO UPDATE SET institution=excluded.institution, updated_at=excluded.updated_at""",
+            (item["id"], item.get("connector", {}).get("name", ""), snapshot_date),
+        )

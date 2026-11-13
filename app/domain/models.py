@@ -11,14 +11,6 @@ class Position(BaseModel):
     amount: float
     updated_at: datetime = Field(default_factory=datetime.now)
 
-    # @model_validator(mode="after")
-    # def _patrimonio_nao_negativo(self):
-    #     # só patrimônio (banco/investimento) precisa ser >= 0;
-    #     # cartao pode ser negativo = dívida
-    #     if self.category not in ("cartao",) and self.amount < 0:
-    #         raise ValueError(f"patrimônio não pode ser negativo: {self.amount}")
-    #     return self
-
     @model_validator(mode="after")
     def _patrimonio_nao_negativo(self):
         # apenas cartão de crédito pode ser negativo = dívida;

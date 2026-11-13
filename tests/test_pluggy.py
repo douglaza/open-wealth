@@ -2,10 +2,12 @@
 Testes do cliente Pluggy com respostas mockadas.
 Nenhuma chamada real à API acontece — usamos unittest.mock.
 """
-import pytest
 import time
 from unittest.mock import patch, MagicMock
-from app.services.pluggy_client import PluggyClient
+
+import pytest
+
+from app.integrations.pluggy_client import PluggyClient  # <- caminho real
 
 
 # ---------- FIXTURES (respostas simuladas da API) ----------
@@ -43,9 +45,11 @@ MOCK_TRANSACTIONS = [
 
 @pytest.fixture
 def client():
-    """Cliente Pluggy com credenciais fake, sem chamar a API real."""
-    with patch.object(PluggyClient, "_authenticate", return_value="fake-token"):
-        return PluggyClient(client_id="fake", client_secret="fake")
+    return PluggyClient(
+        client_id="fake-id",
+        client_secret="fake-secret",
+        settings=None,  # evita tocar no settings de produção
+    )
 
 
 # ---------- TESTES ----------
@@ -92,3 +96,148 @@ class TestPluggyClient:
             client._get("/accounts")
             headers = mock_get.call_args.kwargs["headers"]
             assert headers["X-API-KEY"] == "fake-token"
+
+
+# ---------- AUTH ----------
+
+def test_init_sem_settings_usa_settings_de_producao():
+    """Cobre o fallback: importa settings global quando nada é passado."""
+    with patch("app.core.config.settings") as fake_settings:
+        fake_settings.pluggy_client_id = "prod-id"
+        fake_settings.pluggy_client_secret = "prod-secret"
+        fake_settings.pluggy_base_url = "https://api.pluggy.ai"
+        c = PluggyClient()
+        assert c._client_id == "prod-id"
+        assert c._client_secret == "prod-secret"
+
+
+def test_authenticate_sucesso(client):
+    """POST /auth retorna apiKey; token e expiry são gravados."""
+    resp = MagicMock(status_code=200)
+    resp.json.return_value = {"apiKey": "token-novo"}
+    with patch("requests.post", return_value=resp) as mock_post:
+        token = client._authenticate()
+    assert token == "token-novo"
+    assert client._token == "token-novo"
+    assert client._token_expiry > time.time()
+    body = mock_post.call_args.kwargs["json"]
+    assert body == {"clientId": "fake-id", "clientSecret": "fake-secret"}
+
+
+def test_authenticate_erro_levanta(client):
+    resp = MagicMock(status_code=401, text="invalid credentials")
+    resp.raise_for_status.side_effect = Exception("401")
+    with patch("requests.post", return_value=resp):
+        with pytest.raises(Exception):
+            client._authenticate()
+
+
+def test_get_token_reusa_token_valido(client):
+    client._token = "ainda-valido"
+    client._token_expiry = time.time() + 3600
+    assert client._get_token() == "ainda-valido"
+
+
+def test_get_token_renova_quando_expirado(client):
+    client._token = "expirado"
+    client._token_expiry = time.time() - 1
+    with patch.object(client, "_authenticate", return_value="renovado") as m:
+        assert client._get_token() == "renovado"
+        m.assert_called_once()
+
+
+def test_get_token_renova_quando_ausente(client):
+    with patch.object(client, "_authenticate", return_value="novo") as m:
+        assert client._get_token() == "novo"
+        m.assert_called_once()
+
+
+# ---------- HTTP CORE ----------
+
+def _fake_resp(status=200, payload=None):
+    r = MagicMock(status_code=status, text="")
+    r.json.return_value = payload or {}
+    return r
+
+
+def test_get_envia_token_e_retorna_json(client):
+    client._token = "tk"
+    client._token_expiry = time.time() + 3600
+    with patch("requests.get", return_value=_fake_resp(payload={"results": [1]})) as mg:
+        data = client._get("/accounts", params={"itemId": "i1"})
+    assert data == {"results": [1]}
+    url = mg.call_args.args[0]
+    assert url == "https://api.pluggy.ai/accounts"
+    assert mg.call_args.kwargs["headers"]["X-API-KEY"] == "tk"
+
+
+def test_get_erro_levanta(client):
+    client._token = "tk"
+    client._token_expiry = time.time() + 3600
+    resp = _fake_resp(status=500, payload={"error": "boom"})
+    resp.raise_for_status.side_effect = Exception("500")
+    with patch("requests.get", return_value=resp):
+        with pytest.raises(Exception):
+            client._get("/accounts")
+
+
+# ---------- EXTRACT ----------
+
+def test_extract_results_dict():
+    assert PluggyClient._extract_results({"results": [1, 2]}) == [1, 2]
+
+def test_extract_results_list():
+    assert PluggyClient._extract_results([1, 2]) == [1, 2]
+
+def test_extract_results_sem_chave_results():
+    assert PluggyClient._extract_results({}) == []
+
+
+# ---------- ENDPOINTS ----------
+
+def test_get_item_usa_item_id_do_ambiente(client):
+    client._item_id = "item-do-env"
+    with patch.object(client, "_get", return_value={"id": "item-do-env"}) as m:
+        client.get_item()
+    m.assert_called_once_with("/items/item-do-env")
+
+
+def test_get_accounts_e_investments(client):
+    with patch.object(client, "_get", return_value={"results": MOCK_ACCOUNTS}) as m:
+        accs = client.get_accounts("i1")
+    m.assert_called_once_with("/accounts", params={"itemId": "i1"})
+    assert len(accs) == 2
+
+    with patch.object(client, "_get", return_value={"results": MOCK_INVESTMENTS}):
+        invs = client.get_investments("i1")
+    assert len(invs) == 2
+
+
+def test_get_transactions_sem_cursor(client):
+    with patch.object(client, "_get", return_value={"results": [], "hasNext": False}) as m:
+        client.get_transactions("acc-1")
+    m.assert_called_once_with("/v2/transactions", params={"accountId": "acc-1"})
+
+
+def test_get_transactions_com_cursor(client):
+    with patch.object(client, "_get", return_value={"results": []}) as m:
+        client.get_transactions("acc-1", cursor="abc")
+    m.assert_called_once_with("/v2/transactions",
+                              params={"accountId": "acc-1", "cursor": "abc"})
+
+
+def test_get_all_transactions_pagina_ate_fim(client):
+    """Cobre o loop de paginação."""
+    paginas = [
+        {"results": [{"id": "tx-1"}], "hasNext": True, "nextCursor": "c2"},
+        {"results": [{"id": "tx-2"}], "hasNext": False},
+    ]
+    with patch.object(client, "get_transactions", side_effect=paginas):
+        txs = client.get_all_transactions("acc-1")
+    assert [t["id"] for t in txs] == ["tx-1", "tx-2"]
+
+
+def test_get_all_transactions_primeira_pagina_vazia(client):
+    with patch.object(client, "get_transactions",
+                      return_value={"results": [], "hasNext": False}):
+        assert client.get_all_transactions("acc-1") == []

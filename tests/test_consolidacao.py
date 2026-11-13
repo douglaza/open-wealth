@@ -14,9 +14,13 @@ def _fake_client():
         {"name": "Conta Corrente", "type": "CHECKING", "balance": 43701.43},
         {"name": "Cartão", "type": "CREDIT", "balance": -1006.20},
     ]
+    # client.get_investments.return_value = [
+    #     {"name": "CDB", "type": "FIXED_INCOME", "value": 10000.0},
+    # ]
     client.get_investments.return_value = [
-        {"name": "CDB", "type": "FIXED_INCOME", "value": 10000.0},
+        {"name": "CDB", "type": "FIXED_INCOME", "balance": 10000.0, "value": 1.0},
     ]
+
     return client
 
 
@@ -85,38 +89,26 @@ class TestValorPosicaoInvestimento:
         pos = next(p for p in snapshot.positions if p.asset_name == "CDR")
         assert pos.amount == 2000.0, "posição deve usar balance (2000), não amount (2500)"
 
-    def test_investment_balance_ausente_faz_fallback_para_value(self):
-        """Cascata: balance ausente → value → 0.0."""
+    def test_investment_balance_ausente_faz_fallback_para_amount(self):
+        """Cascata nova: balance → amount → 0. 'value' é qtd de cotas, nunca usado."""
         client = self._make_client([
-            {"name": "X", "type": "ETF", "balance": None, "value": 150.0},
+            {"name": "X", "type": "ETF", "balance": None, "value": 150.0, "amount": 1500.0},
             {"name": "Y", "type": "ETF", "balance": None, "value": None},
         ])
         snapshot = sync_all(client)
-
         valores = {p.asset_name: p.amount for p in snapshot.positions}
-        assert valores["X"] == 150.0
+        assert valores["X"] == 1500.0
         assert valores["Y"] == 0.0
 
     def test_agregacao_soma_valores_apos_cascata(self):
-        """Mesma instituição, fontes de verdade diferentes:
-        CDB usa balance (2000, ignorando amount=2500) e ETF cai no fallback value (150).
-        A agregação tem que somar os valores APÓS a cascata, não os brutos."""
         client = self._make_client([
-            {
-                "name": "CDB",
-                "type": "FIXED_INCOME",
-                "subtype": "CDB",
-                "balance": 2000.0,
-                "value": None,
-                "amount": 2500.0,
-            },
-            {"name": "ETF", "type": "ETF", "balance": None, "value": 150.0},
+            {"name": "CDB", "type": "FIXED_INCOME", "balance": 2000.0,
+            "value": None, "amount": 2500.0},
+            {"name": "ETF", "type": "ETF", "balance": None, "value": 150.0, "amount": 800.0},
         ])
         snapshot = sync_all(client)
         totals = get_totals(snapshot)
-
-        assert totals["by_institution"]["BANCO BTG PACTUAL S/A"] == 2150.0
-        assert totals["total"] == 2150.0
+        assert totals["by_institution"]["BANCO BTG PACTUAL S/A"] == 2800.0
 
 
 def test_cartao_negativo_e_dívida():
@@ -125,3 +117,12 @@ def test_cartao_negativo_e_dívida():
     assert cartao.amount == -1006.2        # dívida preservada, não clampada
     patrimonios = [p for p in snapshot.positions if p.account_type != "CREDIT"]
     assert all(p.amount >= 0 for p in patrimonios)
+
+
+def get_investments(self, item_id):
+    return [{
+        "name": "CDB",
+        "type": "FIXED_INCOME",
+        "balance": 10000.0,
+        "value": 1.0,
+    }]

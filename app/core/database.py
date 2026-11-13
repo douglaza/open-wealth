@@ -12,8 +12,10 @@ CREATE TABLE IF NOT EXISTS items (
     institution     TEXT NOT NULL,
     connector_id    INTEGER,
     status          TEXT DEFAULT 'ACTIVE',
-    created_at      TEXT DEFAULT (datetime('now'))
+    created_at      TEXT DEFAULT (datetime('now')),
+    updated_at      TEXT DEFAULT (datetime('now'))
 );
+
 
 CREATE TABLE IF NOT EXISTS accounts (
     id              TEXT PRIMARY KEY,
@@ -90,5 +92,3 @@ def init_db():
         conn.executescript(SCHEMA)
     print(f"✅ Banco pronto em: {_db_path()}")
 
-# SCHEMA permanece exatamente como está — não colado aqui só para economizar espaço.
-# Apague os blocos duplicados de imports e o DB_PATH morto.

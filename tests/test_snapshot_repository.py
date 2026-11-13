@@ -9,13 +9,6 @@ from app.repositories.snapshot_repository import SnapshotRepository
 
 
 @pytest.fixture()
-def tmp_db(tmp_path, monkeypatch):
-    monkeypatch.setenv("OW_DB_PATH", str(tmp_path / "test.db"))
-    init_db()
-    yield
-
-
-@pytest.fixture()
 def repo() -> SnapshotRepository:
     return SnapshotRepository()
 
@@ -60,3 +53,7 @@ def test_get_between_filters_by_period(tmp_db, repo):
 
     only_recent = repo.get_between(d2, d2)
     assert len(only_recent) == 1 and only_recent[0].total == 200.0
+
+
+def test_get_latest_sem_dados_retorna_none(repo):  # use a fixture que você já tem
+    assert repo.get_latest() is None
