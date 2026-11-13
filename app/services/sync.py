@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 def sync_weekly(client=None, repo=None):
-    """Busca o item Pluggy configurado e persiste seu snapshot diário."""
+    """Busca o item Pluggy configurado, salva contas/investimentos
+    e persiste o snapshot diário."""
     snapshot_date = date.today().isoformat()
     logger.info("sync_started", extra={"snapshot_date": snapshot_date})
 

@@ -91,4 +91,5 @@ def init_db():
     with get_connection() as conn:
         conn.executescript(SCHEMA)
     print(f"✅ Banco pronto em: {_db_path()}")
+    
 

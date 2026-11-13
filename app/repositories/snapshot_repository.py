@@ -10,6 +10,8 @@ class SnapshotRepository:
 
     def __init__(self, conn=None):
         self._conn = conn or get_connection()
+        self._ensure_schema()
+
 
     def snapshot_exists(self, snapshot_date: str, institution: str) -> bool:
         return self._conn.execute(
@@ -140,6 +142,65 @@ class SnapshotRepository:
                        GROUP BY institution) v1 ON i.institution = v1.institution
         """).fetchall()
         return [dict(r) for r in rows]
+
+    def _ensure_schema(self):
+        self._conn.executescript("""
+            CREATE TABLE IF NOT EXISTS items (
+                id TEXT PRIMARY KEY,
+                institution TEXT,
+                updated_at TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS snapshots (
+                snapshot_date TEXT NOT NULL,
+                institution TEXT NOT NULL,
+                account_type TEXT NOT NULL,
+                asset_name TEXT NOT NULL,
+                category TEXT,
+                amount REAL NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS accounts (
+                id TEXT PRIMARY KEY,
+                item_id TEXT NOT NULL,
+                name TEXT,
+                type TEXT,
+                balance REAL,
+                currency TEXT,
+                updated_at TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS investments (
+                id TEXT PRIMARY KEY,
+                item_id TEXT NOT NULL,
+                name TEXT,
+                type TEXT,
+                quantity REAL,
+                price REAL,
+                value REAL,
+                updated_at TEXT
+            );
+        """)
+        self._conn.commit()
+        self._migrate_schema()
+
+    def _migrate_schema(self) -> None:
+        """Migrações incrementais e idempotentes para bancos existentes."""
+        cols = {
+            row[1] for row in self._conn.execute("PRAGMA table_info(items)")
+        }
+        if "updated_at" not in cols:
+            self._conn.execute("ALTER TABLE items ADD COLUMN updated_at TEXT")
+        self._conn.commit()
+
+    def upsert_snapshot(self, items: list[dict], snapshot_date: date) -> None:
+        try:
+            for item in items:
+                self.upsert_item(item, snapshot_date)
+            self._conn.commit()
+        except Exception:
+            self._conn.rollback()
+            raise
 
     def upsert_item(self, item: dict, snapshot_date: str):
         self._conn.execute(
