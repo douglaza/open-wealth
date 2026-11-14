@@ -9,7 +9,7 @@ def render():
     total = conn.execute(
         "SELECT SUM(amount) FROM snapshots WHERE snapshot_date = "
         "(SELECT MAX(snapshot_date) FROM snapshots)"
-    ).fetchone()[0] or 0
+    ).fetchone()["total"] or 0
     st.metric("Patrimônio Total", f"R$ {total:,.2f}")
 
     por_inst = conn.execute("""

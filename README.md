@@ -122,15 +122,27 @@ variável `OW_DB_PATH`. Não compartilhe nem versione credenciais reais.
 
 ## Testes
 
-Execute a suíte a partir da raiz do projeto:
+Execute a suíte a partir da raiz do projeto. Por padrão, cada teste usa um
+SQLite temporário:
 
 ```bash
 pytest -q
 ```
 
-A suíte atual tem 17 testes. As chamadas HTTP à Pluggy são simuladas; os
-testes de repositório rodam contra SQLite em banco temporário, sem acessar o
-banco de produção.
+Para executar os testes de persistência no PostgreSQL, configure uma base de
+dados descartável (os testes limpam suas tabelas antes de cada caso). Com o
+PostgreSQL do Compose em execução, crie essa base uma vez:
+
+```bash
+docker compose up -d db
+docker compose exec db createdb -U openwealth openwealth_test
+
+TEST_DB=postgres \
+TEST_DATABASE_URL=postgresql://usuario:senha@localhost:5433/openwealth_test \
+pytest -q
+```
+
+As chamadas HTTP à Pluggy são simuladas.
 
 ## Executar as aplicações
 

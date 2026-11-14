@@ -2,15 +2,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from app.core.database import init_db
-# from app.models.snapshot import Position, Snapshot
 from app.domain.models import Position, Snapshot
-from app.repositories.snapshot_repository import SnapshotRepository
-
-
-@pytest.fixture()
-def repo() -> SnapshotRepository:
-    return SnapshotRepository()
 
 
 def _snapshot(d: date, amounts: list[float]) -> Snapshot:
@@ -130,7 +122,7 @@ def test_upsert_account_aceita_date(banco_limpo, repo):
     )
     row = repo._conn.execute(
         "SELECT balance FROM accounts WHERE id = 'acc1'").fetchone()
-    assert row[0] == 250.0
+    assert row["balance"] == 250.0
 
 
 def test_upsert_investment_aceita_date(banco_limpo, repo):

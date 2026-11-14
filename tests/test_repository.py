@@ -39,10 +39,12 @@ class TestSaveAll:
         repo.save_all([_snap(date(2025, 1, 2))])
         assert len(repo.get_all()) == 2
 
-    def test_rollback_em_erro(self, repo):
+    def test_rollback_em_erro(self, repo, db_integrity_error):
         original = _snap(date(2025, 1, 1), amount=100.0)
         repo.save_all([original])
-        antes = repo._conn.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
+        antes = repo._conn.execute(
+            "SELECT COUNT(*) AS count FROM snapshots"
+        ).fetchone()["count"]
 
         # Simula dados inválidos na fronteira do banco para falhar após o DELETE.
         invalid = Snapshot.model_construct(
@@ -57,7 +59,7 @@ class TestSaveAll:
                 ),
             ],
         )
-        with pytest.raises(sqlite3.IntegrityError):
+        with pytest.raises(db_integrity_error):
             repo.save_all([invalid])
 
         # O rollback restaura a linha apagada antes da falha de inserção.
@@ -132,8 +134,39 @@ class TestUpsertsDadosCruos:
 class TestMigrateSchema:
     """Linhas ~265-275: migração idempotente para bancos antigos."""
 
-    def test_banco_sem_updated_at_recebe_coluna(self, tmp_path):
+    def test_postgres_consulta_colunas_no_catalogo(self, repo, monkeypatch):
+        import app.repositories.snapshot_repository as repository_module
+
+        class PostgresLikeConnection:
+            def __init__(self, conn):
+                self._conn = conn
+                self.queries = []
+
+            def execute(self, query, params=()):
+                self.queries.append((query, params))
+                if "information_schema.columns" in query:
+                    return [{"column_name": "updated_at"}]
+                return self._conn.execute(query, params)
+
+            def commit(self):
+                self._conn.commit()
+
+        connection = PostgresLikeConnection(repo._conn)
+        monkeypatch.setattr(repository_module, "_is_postgres", lambda: True)
+        monkeypatch.setattr(repo, "_conn", connection)
+
+        repo._migrate_schema()
+
+        assert any(
+            "information_schema.columns" in query and params == ("items",)
+            for query, params in connection.queries
+        )
+
+    def test_banco_sem_updated_at_recebe_coluna(self, tmp_path, monkeypatch):
         # simula banco "antigo": schema de items sem updated_at
+        import app.repositories.snapshot_repository as repository_module
+
+        monkeypatch.setattr(repository_module, "_is_postgres", lambda: False)
         conn = sqlite3.connect(tmp_path / "legacy.db")
         conn.execute("CREATE TABLE items (id TEXT PRIMARY KEY, institution TEXT)")
         conn.execute("INSERT INTO items VALUES ('i1', 'XP')")
@@ -145,10 +178,25 @@ class TestMigrateSchema:
         cols = {r[1] for r in repo._conn.execute("PRAGMA table_info(items)")}
         assert "updated_at" in cols
         # dado pré-existente preservado
-        assert repo._conn.execute("SELECT institution FROM items").fetchone()[0] == "XP"
+        assert repo._conn.execute(
+            "SELECT institution FROM items"
+        ).fetchone()[0] == "XP"
 
-    def test_rodar_migracaoDuasVezes_nao_quebra(self, repo):
-        cols1 = {r[1] for r in repo._conn.execute("PRAGMA table_info(items)")}
+    def test_rodar_migracaoDuasVezes_nao_quebra(self, repo, db_is_postgres):
+        if db_is_postgres:
+            query = """SELECT column_name
+                       FROM information_schema.columns
+                       WHERE table_schema = current_schema()
+                         AND table_name = 'items'"""
+            cols = lambda: {
+                row["column_name"] for row in repo._conn.execute(query)
+            }
+        else:
+            cols = lambda: {
+                row[1] for row in repo._conn.execute("PRAGMA table_info(items)")
+            }
+
+        cols1 = cols()
         repo._migrate_schema()
-        cols2 = {r[1] for r in repo._conn.execute("PRAGMA table_info(items)")}
+        cols2 = cols()
         assert cols1 == cols2  # idempotente

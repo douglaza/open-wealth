@@ -6,4 +6,5 @@ fastapi
 uvicorn
 apscheduler
 pydantic-settings
+psycopg[binary]>=3.2
 pytest

@@ -1,62 +1,47 @@
 import pytest
 from fastapi.testclient import TestClient
 
-
 from datetime import date
+
+from app.core.database import get_connection
 from app.domain.models import Position, Snapshot
 from app.repositories.snapshot_repository import SnapshotRepository
 
 
-# @pytest.fixture
-# def seed_snapshots():
-#     def _seed(datas: list[str], valores: list[float]):
-#         repo = SnapshotRepository()
-#         repo.add_all(
-#             Snapshot(snapshot_date=date.fromisoformat(d), total=v)
-#             for d, v in zip(datas, valores)
-#         )
-#     return _seed
-
-
 @pytest.fixture
-def seed_snapshots():
+def seed_snapshots(repo):
     def _seed(datas: list[str], valores: list[float]):
-        repo = SnapshotRepository()
-        repo.add_all(
-            Snapshot(
-                snapshot_date=date.fromisoformat(d),
-                positions=[
-                    Position(institution="X", account_type="Y",
-                             asset_name="Z", category="C", amount=v)
-                ],
-            )
-            for d, v in zip(datas, valores)
+        repo.save_all(
+            [
+                Snapshot(
+                    snapshot_date=date.fromisoformat(d),
+                    positions=[
+                        Position(institution="X", account_type="Y",
+                                 asset_name="Z", category="C", amount=v)
+                    ],
+                )
+                for d, v in zip(datas, valores)
+            ]
         )
     return _seed
 
 
-# @pytest.fixture
-# def client(monkeypatch):
-#     # segue o padrão dos seus outros testes de API (sqlite temporário, deps sobrescritas)
-#     from app.api.main import app
-#     yield TestClient(app)
-
 @pytest.fixture
-def client(monkeypatch, tmp_path):
-    from app.api import main
-    db = tmp_path / "test.db"
+def client():
+    from app.api.main import create_app
+    from app.api.routes import get_repo
 
-    def _fake_conn():
-        import sqlite3
-        conn = sqlite3.connect(db)
-        conn.row_factory = sqlite3.Row
-        return conn
+    app = create_app()
+    def get_test_repo():
+        conn = get_connection()
+        try:
+            yield SnapshotRepository(conn)
+        finally:
+            conn.close()
 
-    monkeypatch.setattr("app.core.database.get_connection", _fake_conn)
-    # se as rotas usam Depends(get_repo) ou similar, sobrescreva a dependency também
-    yield TestClient(main.app)
-
-
+    app.dependency_overrides[get_repo] = get_test_repo
+    with TestClient(app) as test_client:
+        yield test_client
 
 def test_evolucao_retorna_200_com_serie(client):
     resp = client.get("/api/v1/historico/evolucao")
@@ -90,8 +75,7 @@ def test_filtro_por_periodo(client, seed_snapshots):
     assert body["datas"] == ["2026-12-01"]
 
 
-def test_repo_roundtrip(seed_snapshots):
+def test_repo_roundtrip(seed_snapshots, repo):
     seed_snapshots(["2026-11-01", "2026-11-08"], [180_000.0, 183_000.0])
-    repo = SnapshotRepository()
     snaps = repo.get_between("2026-11-01", "2026-11-30")
     assert [s.snapshot_date.isoformat() for s in snaps] == ["2026-11-01", "2026-11-08"]

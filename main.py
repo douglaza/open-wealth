@@ -4,7 +4,8 @@ from fastapi import FastAPI
 
 from app.core.database import init_db
 from app.core.scheduler import start_scheduler, stop_scheduler
-from app.repositories.snapshot_repository import get_all
+from app.api.routes import router
+from app.repositories.snapshot_repository import SnapshotRepository
 
 
 @asynccontextmanager
@@ -16,11 +17,12 @@ async def lifespan(app):
 
 
 app = FastAPI(title="OpenWealth", version="0.1.0", lifespan=lifespan)
+app.include_router(router)
 
 
 @app.get("/patrimonio")
 def patrimonio():
-    return get_all()
+    return SnapshotRepository().get_all()
 
 
 @app.get("/health")

@@ -8,3 +8,5 @@ data/exports/
 .agents/
 docs/*
 !docs/arquitetura.md
+*.pyc
+*.db

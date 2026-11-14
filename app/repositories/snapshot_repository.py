@@ -1,7 +1,7 @@
 """Persistência de snapshots e posições. Fala negócio, não SQL espalhado."""
 from datetime import date
 
-from app.core.database import get_connection
+from app.core.database import _is_postgres, get_connection
 from app.domain.models import Position, Snapshot
 
 
@@ -101,20 +101,6 @@ class SnapshotRepository:
         query += " ORDER BY snapshot_date"
         rows = self._conn.execute(query, params).fetchall()
         return self._rows_to_snapshots(rows)
-
-
-    # def get_between(self, inicio: str | None, fim: str | None) -> list[Snapshot]:
-    #     query = "SELECT * FROM snapshots WHERE 1=1"
-    #     params: list = []
-    #     if inicio:
-    #         query += " AND snapshot_date >= ?"
-    #         params.append(inicio)
-    #     if fim:
-    #         query += " AND snapshot_date <= ?"
-    #         params.append(fim)
-    #     query += " ORDER BY snapshot_date"
-    #     rows = self._conn.execute(query, params).fetchall()
-    #     return self._rows_to_snapshots(rows)
 
     def ultimos_totais_por_data(self, n: int = 2) -> list[dict]:
         rows = self._conn.execute(
@@ -261,12 +247,23 @@ class SnapshotRepository:
                 updated_at TEXT
             );
         """)
-        self._conn.commit()
         self._migrate_schema()
 
     def _migrate_schema(self) -> None:
         """Migrações incrementais e idempotentes para bancos existentes."""
-        cols = {row[1] for row in self._conn.execute("PRAGMA table_info(items)")}
+        if _is_postgres():
+            rows = self._conn.execute(
+                """SELECT column_name
+                   FROM information_schema.columns
+                   WHERE table_schema = current_schema() AND table_name = ?""",
+                ("items",),
+            )
+            cols = {row["column_name"] for row in rows}
+        else:
+            cols = {
+                row[1]
+                for row in self._conn.execute("PRAGMA table_info(items)")
+            }
         if "updated_at" not in cols:
             self._conn.execute("ALTER TABLE items ADD COLUMN updated_at TEXT")
         self._conn.commit()
