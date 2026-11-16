@@ -118,6 +118,12 @@ variável `OW_DB_PATH`. Não compartilhe nem versione credenciais reais.
 
 ## Testes
 
+Para instalar as ferramentas de desenvolvimento e dependências de teste:
+
+```bash
+pip install -e ".[dev]"
+```
+
 Execute a suíte a partir da raiz do projeto. Por padrão, cada teste usa um
 SQLite temporário:
 

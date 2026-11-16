@@ -59,6 +59,60 @@ def test_get_latest_sem_dados_retorna_none(repo):  # use a fixture que você já
     assert repo.get_latest() is None
 
 
+def test_add_all_insere_sem_substituir_snapshots(repo):
+    primeiro = _snapshot(date(2025, 1, 1), [100.0])
+    repo.add_all([primeiro])
+    repo.add_all([_snapshot(date(2025, 1, 1), [200.0])])
+
+    snapshots = repo.get_all()
+    assert len(snapshots) == 1
+    assert snapshots[0].total == 300.0
+
+
+def test_consultas_de_totais_das_ultimas_datas(repo):
+    repo.save_all(
+        [
+            _snapshot(date(2025, 1, 1), [100.0]),
+            Snapshot(
+                snapshot_date=date(2025, 1, 2),
+                positions=[
+                    Position(
+                        institution="Banco X",
+                        account_type="conta",
+                        asset_name="Ativo 0",
+                        category="Conta",
+                        amount=200.0,
+                    ),
+                    Position(
+                        institution="XP",
+                        account_type="broker",
+                        asset_name="Ativo 1",
+                        category="Ações",
+                        amount=300.0,
+                    ),
+                ],
+            ),
+        ]
+    )
+
+    totals = repo.ultimos_totais_por_data(1)
+    assert len(totals) == 1
+    assert totals[0]["total"] == 500.0
+
+    by_institution = {
+        row["institution"]: row for row in repo.totais_por_instituicao_ultimas_datas()
+    }
+    assert by_institution["Banco X"]["valor_anterior"] == 100.0
+    assert by_institution["Banco X"]["valor_atual"] == 200.0
+    assert by_institution["XP"]["valor_anterior"] == 0
+    assert by_institution["XP"]["valor_atual"] == 300.0
+
+
+def test_consultas_de_totais_sem_snapshots(repo):
+    assert repo.ultimos_totais_por_data() == []
+    assert repo.totais_por_instituicao_ultimas_datas() == []
+
+
 def test_main_historico_integrado(repo_com_dados, monkeypatch, capsys):
     """Cobre o parser, subcomandos e dispatch do main()."""
     from app import cli

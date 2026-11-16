@@ -63,3 +63,16 @@ def test_main_granularidade_default(repo, monkeypatch, capsys):
     cli.main()
     out = capsys.readouterr().out
     assert "Evolução mensal" in out
+
+
+def test_modulo_cli_executa_main_guard(repo_com_dados, monkeypatch, capsys):
+    import runpy
+
+    from app import cli
+
+    monkeypatch.setattr(
+        "sys.argv",
+        ["open-wealth", "historico", "--granularidade", "diaria"],
+    )
+    runpy.run_path(cli.__file__, run_name="__main__")
+    assert "Evolução do patrimônio" in capsys.readouterr().out
