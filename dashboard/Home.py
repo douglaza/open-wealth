@@ -50,10 +50,7 @@ with chart_col1:
             ],
         )
     )
-    st.altair_chart(
-        evolucao_chart,
-        alt="Evolução do patrimônio total por data",
-    )
+    st.altair_chart(evolucao_chart, width="stretch")
 
 with chart_col2:
     st.subheader("Concentração por instituição")
@@ -62,7 +59,7 @@ with chart_col2:
     st.dataframe(
         institutions_pct.assign(pct=pct_fmt),
         hide_index=True,
-        alt="Participação de cada instituição no patrimônio atual",
+        width="stretch",
     )
 
     top_col, hhi_col = st.columns(2)
@@ -85,5 +82,5 @@ with chart_col2:
             institutions_pct,
             x="institution",
             y="pct",
-            alt="Participação percentual do patrimônio por instituição",
+            width="stretch",
         )
