@@ -1,7 +1,16 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.9  # use a versão que você tem instalada
+    rev: v0.4.9
     hooks:
-      - id: ruff        # lint + fix
+      - id: ruff
         args: [--fix]
-      - id: ruff-format # format
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: ./.venv/bin/mypy app
+        language: system
+        types: [python]
+        pass_filenames: false

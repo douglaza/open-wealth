@@ -18,6 +18,7 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=4.1",
     "ruff>=0.4",
+    "mypy>=1.10"
 ]
 
 [build-system]
@@ -81,4 +82,20 @@ addopts = "-ra -q"
 source = ["app"]
 
 [tool.coverage.report]
-fail_under = 80
+fail_under = 100
+
+
+# ---------------------------------------------------------------------------
+# Mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = false
+warn_unused_configs = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "apscheduler.*",
+]
+ignore_missing_imports = true

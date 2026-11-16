@@ -32,11 +32,10 @@ class PluggyClient:
         self._client_secret = client_secret or (s.pluggy_client_secret if s else "")
         self._base_url = s.pluggy_base_url if s else "https://api.pluggy.ai"
         self._item_id = getattr(s, "pluggy_item_id", None) if s else None
-        self._token = None
-        self._token_expiry = 0
+        self._token: str | None = None
+        self._token_expiry: float = 0.0
 
     # ---------- auth ----------
-
     def _authenticate(self) -> str:
         try:
             resp = requests.post(
@@ -55,15 +54,16 @@ class PluggyClient:
             raise PluggyError(f"Auth falhou: {status} {body}") from e
         except requests.RequestException as e:
             raise PluggyError("Falha de rede na autenticação") from e
-
-        self._token = resp.json()["apiKey"]
+        token = str(resp.json()["apiKey"])
+        self._token = token
         self._token_expiry = time.time() + self.TOKEN_LIFETIME
-        return self._token
+        return token
 
     def _get_token(self) -> str:
-        if not self._token or time.time() > self._token_expiry:
+        token = self._token
+        if not token or time.time() > self._token_expiry:
             return self._authenticate()
-        return self._token
+        return token
 
     # ---------- http core ----------
 
