@@ -199,6 +199,7 @@ perdida se a máquina estava desligada).
 ```bash
 sudo systemctl enable --now open-wealth-sync.timer
 systemctl list-timers open-wealth-sync.timer
+```
 
 - O sync agendado depende do timer systemd da VM; não há retry próprio
   em caso de falha na chamada à Pluggy (ver retry/backoff abaixo).
