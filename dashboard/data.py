@@ -107,17 +107,24 @@ def calculate_concentration(
 
 def calculate_allocation(latest_snapshots: pd.DataFrame) -> pd.DataFrame:
     """Soma patrimônio por categoria no snapshot mais recente, ordenado desc."""
+    colunas = ["category", "amount"]
     if latest_snapshots.empty:
-        return pd.DataFrame(columns=["category", "amount"])
+        return pd.DataFrame(columns=colunas + ["pct"])
     if "category" not in latest_snapshots.columns:
         latest_snapshots = latest_snapshots.assign(category="Não classificado")
-    return (
+    allocation = (
         latest_snapshots.fillna({"category": "Não classificado"})
         .groupby("category", as_index=False)["amount"]
         .sum()
         .sort_values("amount", ascending=False)
         .reset_index(drop=True)
     )
+    total = allocation["amount"].sum()
+    allocation = allocation.assign(
+        pct=allocation["amount"] / total if total > 0 else 0.0
+    )
+    return allocation
+
 
 
 def _find_closest_before(df: pd.DataFrame, target_date: pd.Timestamp) -> float | None:
