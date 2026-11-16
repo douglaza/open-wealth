@@ -10,7 +10,7 @@ snapshots, persistência em SQLite, API FastAPI e visualizações em Streamlit.
 
 ## Tutorial
 
-- [Tutorial será disponibilizado ao final do projeto].
+- [Tutorial da Fase 8 — Observabilidade](docs/tutorial_fase8.html).
 
 ## Funcionalidades implementadas
 
@@ -27,24 +27,29 @@ snapshots, persistência em SQLite, API FastAPI e visualizações em Streamlit.
   e responde `202 Accepted`.
 - Log estruturado em JSON com eventos nomeados por etapa do sync
   (`sync_started`, `sync_data_fetched`, `snapshot_saved`, `snapshot_skipped`).
+- **Observabilidade em produção (Fase 8):** endpoint `GET /metrics` para
+  Prometheus, com métricas de negócio (patrimônio líquido, contas e ativos) e
+  métricas SRE (duração da sincronização e falhas na comunicação com a Pluggy).
+- **Stack de monitoramento:** Prometheus na porta `9090` e Grafana na porta
+  `3000`, definidos no `docker-compose.yml`, com volumes persistentes para
+  séries temporais e dados do Grafana.
 - Dashboard Streamlit para visualizar snapshots, patrimônio, investimentos e
   evolução.
 - Scheduler configurado para executar às segundas-feiras às 06:00, no fuso
   `America/Sao_Paulo`.
-- 17 testes automatizados, incluindo regressões da valoração de investimentos
-  e dedup diária do repositório contra SQLite real.
+- 176 testes automatizados e 100% de cobertura da aplicação (`app/`).
 
 ### Regra de valoração dos investimentos
 
 O valor de cada posição usa a seguinte prioridade:
 
 1. `balance`, quando disponível;
-2. `value`, como fallback;
-3. `quantity * price`, se ambos estiverem disponíveis;
+2. `quantity * price`, se ambos estiverem disponíveis;
+3. `amount`, como fallback;
 4. `0.0`, quando não houver valor utilizável.
 
-O campo `amount` da API não é usado: pode divergir do saldo exibido pela
-instituição. O valor resolvido pela cascata é usado na agregação patrimonial.
+O campo `value` da API não é usado como saldo da posição. O valor resolvido
+pela cascata é usado na agregação patrimonial.
 
 ## Arquitetura
 
@@ -157,6 +162,7 @@ uvicorn main:app --reload
 Rotas disponíveis:
 
 - `GET /health` — verificação de disponibilidade.
+- `GET /metrics` — métricas Prometheus da aplicação.
 - `POST /api/v1/sync` — dispara o sync; responde `202 Accepted` e grava o
   snapshot do dia (ou pula se já existir).
 
@@ -205,7 +211,7 @@ systemctl list-timers open-wealth-sync.timer
   em caso de falha na chamada à Pluggy (ver retry/backoff abaixo).
 
 ![CI](https://github.com/douglaza/open-wealth/actions/workflows/ci.yml/badge.svg)
-![Coverage](https://img.shields.io/badge/coverage-80%25+-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)
 
 
 ## Roadmap

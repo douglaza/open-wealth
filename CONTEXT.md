@@ -26,6 +26,9 @@ consultar patrimônio e evolução.
 - O banco é selecionado por `DATABASE_URL`: SQLite para desenvolvimento local
   ou PostgreSQL quando configurado. Não execute limpezas ou seeds no banco
   configurado sem confirmar o alvo.
+- Observabilidade em tempo real integrada com Prometheus e Grafana.
+- O lifespan do FastAPI inicializa o banco e carrega o estado do snapshot
+  atual para as métricas no startup.
 
 ## Arquitetura e pontos de entrada
 
@@ -76,6 +79,7 @@ Rotas principais:
 - `GET /api/v1/carteira/posicoes`
 - `GET /api/v1/carteira/instituicoes`
 - `GET /api/v1/carteira/alocacao`
+- `GET /metrics` — métricas Prometheus da aplicação.
 
 Comandos usuais, a partir da raiz:
 
