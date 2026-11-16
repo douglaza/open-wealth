@@ -1,5 +1,6 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+
 from app.services.sync import sync_weekly
 
 scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")

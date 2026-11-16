@@ -10,10 +10,15 @@ from app.repositories.snapshot_repository import SnapshotRepository
 def _snap(d: date, inst: str = "XP", amount: float = 100.0) -> Snapshot:
     return Snapshot(
         snapshot_date=d,
-        positions=[Position(
-            institution=inst, account_type="broker",
-            asset_name="ITSA4", category="Ações", amount=amount,
-        )],
+        positions=[
+            Position(
+                institution=inst,
+                account_type="broker",
+                asset_name="ITSA4",
+                category="Ações",
+                amount=amount,
+            )
+        ],
     )
 
 
@@ -42,9 +47,7 @@ class TestSaveAll:
     def test_rollback_em_erro(self, repo, db_integrity_error):
         original = _snap(date(2025, 1, 1), amount=100.0)
         repo.save_all([original])
-        antes = repo._conn.execute(
-            "SELECT COUNT(*) AS count FROM snapshots"
-        ).fetchone()["count"]
+        antes = repo._conn.execute("SELECT COUNT(*) AS count FROM snapshots").fetchone()["count"]
 
         # Simula dados inválidos na fronteira do banco para falhar após o DELETE.
         invalid = Snapshot.model_construct(
@@ -84,12 +87,14 @@ class TestUpsertsDadosCruos:
         repo.upsert_item({"id": "i1", "connector": {"name": "XP"}}, "2025-01-01")
         repo.upsert_account(
             {"id": "a1", "name": "Conta XP", "type": "broker", "balance": 500},
-            item_id="i1", snapshot_date="2025-01-01",
+            item_id="i1",
+            snapshot_date="2025-01-01",
         )
         # atualização de saldo
         repo.upsert_account(
             {"id": "a1", "balance": 750},
-            item_id="i1", snapshot_date="2025-01-02",
+            item_id="i1",
+            snapshot_date="2025-01-02",
         )
         row = dict(repo._conn.execute("SELECT * FROM accounts WHERE id='a1'").fetchone())
         assert row["balance"] == 750
@@ -106,7 +111,8 @@ class TestUpsertsDadosCruos:
                 "balance": 60.0,
                 "amount": 1700.0,
             },
-            item_id="i1", snapshot_date="2025-01-01",
+            item_id="i1",
+            snapshot_date="2025-01-01",
         )
         row = dict(repo._conn.execute("SELECT * FROM investments WHERE id='v1'").fetchone())
         assert row["value"] == 60.0
@@ -121,7 +127,8 @@ class TestUpsertsDadosCruos:
                 "price": 160.0,
                 "amount": 1700.0,
             },
-            item_id="i1", snapshot_date="2025-01-01",
+            item_id="i1",
+            snapshot_date="2025-01-01",
         )
         row = dict(repo._conn.execute("SELECT * FROM investments WHERE id='v1'").fetchone())
         assert row["value"] == 1600.0
@@ -131,7 +138,8 @@ class TestUpsertsDadosCruos:
         repo.upsert_item({"id": "i1", "connector": {"name": "XP"}}, "2025-01-01")
         repo.upsert_investment(
             {"id": "v2", "quantity": None, "price": None},
-            item_id="i1", snapshot_date="2025-01-01",
+            item_id="i1",
+            snapshot_date="2025-01-01",
         )
         row = dict(repo._conn.execute("SELECT * FROM investments WHERE id='v2'").fetchone())
         assert row["value"] == 0
@@ -200,23 +208,21 @@ class TestMigrateSchema:
         cols = {r[1] for r in repo._conn.execute("PRAGMA table_info(items)")}
         assert "updated_at" in cols
         # dado pré-existente preservado
-        assert repo._conn.execute(
-            "SELECT institution FROM items"
-        ).fetchone()[0] == "XP"
+        assert repo._conn.execute("SELECT institution FROM items").fetchone()[0] == "XP"
 
-    def test_rodar_migracaoDuasVezes_nao_quebra(self, repo, db_is_postgres):
+    def test_rodar_migracao_duas_vezes_nao_quebra(self, repo, db_is_postgres):
         if db_is_postgres:
             query = """SELECT column_name
                        FROM information_schema.columns
                        WHERE table_schema = current_schema()
                          AND table_name = 'items'"""
-            cols = lambda: {
-                row["column_name"] for row in repo._conn.execute(query)
-            }
+
+            def cols():
+                return {row["column_name"] for row in repo._conn.execute(query)}
         else:
-            cols = lambda: {
-                row[1] for row in repo._conn.execute("PRAGMA table_info(items)")
-            }
+
+            def cols():
+                return {row[1] for row in repo._conn.execute("PRAGMA table_info(items)")}
 
         cols1 = cols()
         repo._migrate_schema()

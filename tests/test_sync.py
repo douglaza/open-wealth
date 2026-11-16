@@ -1,12 +1,11 @@
 import pytest
 import requests
 
-from datetime import date
-from app.services.sync import sync_weekly, _map_category
-from app.repositories.snapshot_repository import SnapshotRepository
-from app.core.exceptions import PluggyError
 from app.core.config import Settings
+from app.core.exceptions import PluggyError
 from app.integrations.pluggy_client import PluggyClient
+from app.repositories.snapshot_repository import SnapshotRepository
+from app.services.sync import sync_weekly
 
 
 class FakeClient:
@@ -14,7 +13,13 @@ class FakeClient:
 
     DEFAULT_ITEM = {"id": "item-1", "connector": {"name": "Banco Falso"}}
     DEFAULT_ACCOUNTS = [
-        {"id": "acc-1", "name": "Corrente", "type": "checking", "balance": 100.0, "currency": "BRL"},
+        {
+            "id": "acc-1",
+            "name": "Corrente",
+            "type": "checking",
+            "balance": 100.0,
+            "currency": "BRL",
+        },
     ]
     DEFAULT_INVESTMENTS = [
         {
@@ -74,6 +79,7 @@ class PluggyErrorClient(FakeClient):
     def get_item(self):
         raise PluggyError("API fora")
 
+
 def test_sync_propaga_pluggy_error(caplog):
     repo = FakeRepo()
     with pytest.raises(PluggyError):
@@ -87,12 +93,9 @@ def test_sync_client_error_propagates_sem_commit(caplog):
     repo = FakeRepo()
     with pytest.raises(RuntimeError):
         sync_weekly(client=ExplodingClient(), repo=repo)
-    assert ("commit",) not in repo.calls                      # nada parcial persistido
+    assert ("commit",) not in repo.calls  # nada parcial persistido
     assert all(op != "upsert_item" for op, *_ in repo.calls)  # nada foi gravado
-    failure = next(
-        record for record in caplog.records
-        if record.getMessage() == "sync_failed"
-    )
+    failure = next(record for record in caplog.records if record.getMessage() == "sync_failed")
     assert failure.exc_info[0] is RuntimeError
 
 
@@ -117,8 +120,7 @@ def test_sync_flows_through_dependencies(caplog):
         "snapshot_saved",
     ]
     fetched = next(
-        record for record in caplog.records
-        if record.getMessage() == "sync_data_fetched"
+        record for record in caplog.records if record.getMessage() == "sync_data_fetched"
     )
     assert fetched.account_count == 1
     assert fetched.investment_count == 1
@@ -140,8 +142,20 @@ def test_sync_weekly_com_sqlite_real(banco_limpo, mocker):
     client = FakeClient(
         item={"id": "item-1", "connector": {"name": "Banco X"}},
         accounts=[
-            {"id": "acc-1", "name": "Corrente", "type": "CHECKING", "balance": 1000.0, "currency": "BRL"},
-            {"id": "acc-2", "name": "Poupança", "type": "SAVINGS", "balance": 500.0, "currency": "BRL"},
+            {
+                "id": "acc-1",
+                "name": "Corrente",
+                "type": "CHECKING",
+                "balance": 1000.0,
+                "currency": "BRL",
+            },
+            {
+                "id": "acc-2",
+                "name": "Poupança",
+                "type": "SAVINGS",
+                "balance": 500.0,
+                "currency": "BRL",
+            },
         ],
         investments=[
             {
@@ -185,7 +199,8 @@ def test_sync_weekly_com_sqlite_real(banco_limpo, mocker):
 
 def make_client():
     return PluggyClient(
-        client_id="id", client_secret="secret",
+        client_id="id",
+        client_secret="secret",
         settings=Settings(pluggy_client_id="id", pluggy_client_secret="secret"),
     )
 
@@ -253,23 +268,27 @@ def test_get_network_error_vira_pluggy_error(mocker, exc):
 #     assert inv_row.acc_type == "investment"
 #     assert inv_row.amount == 11720.42   # balance, não value/cotas
 
+
 def test_snapshot_includes_investments():
     client = FakeClient(
         investments=[
-            {"id": "i1", "name": "PGBL", "type": "SECURITY",
-             "balance": 11720.42, "quantity": None, "price": None, "value": 3.6},
+            {
+                "id": "i1",
+                "name": "PGBL",
+                "type": "SECURITY",
+                "balance": 11720.42,
+                "quantity": None,
+                "price": None,
+                "value": 3.6,
+            },
         ],
     )
     repo = SnapshotRepository()
     sync_weekly(client=client, repo=repo)
 
-    rows = repo._conn.execute(
-        "SELECT * FROM snapshots WHERE category = 'SECURITY'"
-    ).fetchall()
+    rows = repo._conn.execute("SELECT * FROM snapshots WHERE category = 'SECURITY'").fetchall()
     assert len(rows) == 1
-    assert rows[0]["amount"] == 11720.42      # balance, não cotas
+    assert rows[0]["amount"] == 11720.42  # balance, não cotas
     assert rows[0]["account_type"] == "investment"
-    investment = repo._conn.execute(
-        "SELECT value FROM investments WHERE id = 'i1'"
-    ).fetchone()
+    investment = repo._conn.execute("SELECT value FROM investments WHERE id = 'i1'").fetchone()
     assert investment["value"] == 11720.42

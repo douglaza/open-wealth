@@ -1,4 +1,5 @@
 """Domínio puro: sem imports de HTTP, DB ou framework além do Pydantic."""
+
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator

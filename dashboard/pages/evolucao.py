@@ -1,7 +1,10 @@
-import sys, pathlib
+import pathlib
+import sys
+
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent.parent))
 
 import streamlit as st
+
 from app.core.database import get_connection
 from dashboard.data import prepare_snapshot_data
 

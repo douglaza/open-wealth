@@ -1,4 +1,4 @@
-from app.cli import cmd_historico, _snapshots_todos
+from app.cli import cmd_historico
 
 
 def test_cmd_historico_diaria(repo_com_dados, capsys):
@@ -36,7 +36,8 @@ def test_cmd_historico_sem_dados(repo, capsys):
 
 def test_snapshots_todos_pega_intervalo_aberto(repo_com_dados, monkeypatch):
     """_snapshots_todos usa date.min como início — cobre tudo que existe."""
-    import app.cli as cli
+    from app import cli
+
     monkeypatch.setattr(cli, "get_connection", lambda *a, **kw: repo_com_dados._conn)
     snaps = cli._snapshots_todos()
     assert len(snaps) == 3
@@ -44,7 +45,8 @@ def test_snapshots_todos_pega_intervalo_aberto(repo_com_dados, monkeypatch):
 
 def test_main_historico_integrado(repo_com_dados, monkeypatch, capsys):
     """Cobre o parser, subcomandos e dispatch do main()."""
-    import app.cli as cli
+    from app import cli
+
     monkeypatch.setattr(cli, "get_connection", lambda *a, **kw: repo_com_dados._conn)
     monkeypatch.setattr("sys.argv", ["open-wealth", "historico", "-g", "diaria"])
     cli.main()
@@ -54,7 +56,8 @@ def test_main_historico_integrado(repo_com_dados, monkeypatch, capsys):
 
 def test_main_granularidade_default(repo, monkeypatch, capsys):
     """Sem -g, cai em 'mensal' (default) e o parser roda."""
-    import app.cli as cli
+    from app import cli
+
     monkeypatch.setattr(cli, "get_connection", lambda *a, **kw: repo._conn)
     monkeypatch.setattr("sys.argv", ["open-wealth", "historico"])
     cli.main()

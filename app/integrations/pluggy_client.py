@@ -2,19 +2,19 @@
 Cliente da API Pluggy (https://pluggy.ai).
 Docs: https://pluggy.readme.io/reference
 """
+
 import logging
 import time
+
 import requests
 
 from app.core.config import Settings
 from app.core.exceptions import PluggyError
 
-
 logger = logging.getLogger(__name__)
 
 
 class PluggyClient:
-
     TOKEN_LIFETIME = 2 * 60 * 60 - 60  # tokens duram 2h; renovamos 1min antes
 
     def __init__(
@@ -25,6 +25,7 @@ class PluggyClient:
     ):
         if settings is None and (client_id is None or client_secret is None):
             from app.core.config import settings as _s
+
             settings = _s
         s = settings
         self._client_id = client_id or (s.pluggy_client_id if s else "")
@@ -64,10 +65,9 @@ class PluggyClient:
             return self._authenticate()
         return self._token
 
-
     # ---------- http core ----------
 
-    def _get(self, path: str, params: dict = None) -> dict:
+    def _get(self, path: str, params: dict | None = None) -> dict:
         try:
             resp = requests.get(
                 f"{self._base_url}{path}",
@@ -84,7 +84,6 @@ class PluggyClient:
 
         return resp.json()
 
-
     @staticmethod
     def _extract_results(data) -> list:
         if isinstance(data, list):
@@ -93,22 +92,23 @@ class PluggyClient:
 
     # ---------- endpoints ----------
 
-    def get_item(self, item_id: str = None) -> dict:
+    def get_item(self, item_id: str | None = None) -> dict:
         """Item atual (do .env) ou um específico."""
         return self._get(f"/items/{item_id or self._item_id}")
 
-    def get_accounts(self, item_id: str = None) -> list:
+    def get_accounts(self, item_id: str | None = None) -> list:
         return self._extract_results(
             self._get("/accounts", params={"itemId": item_id or self._item_id})
         )
 
-    def get_investments(self, item_id: str = None) -> list:
+    def get_investments(self, item_id: str | None = None) -> list:
         return self._extract_results(
             self._get("/investments", params={"itemId": item_id or self._item_id})
         )
 
-    def get_transactions(self, account_id: str, cursor: str = None) -> dict:
-        """API v2: paginação por cursor. Retorna {'results': [...], 'hasNext': bool, 'nextCursor': ...}."""
+    def get_transactions(self, account_id: str, cursor: str | None = None) -> dict:
+        """API v2: paginação por cursor.
+        Retorna {'results': [...], 'hasNext': bool, 'nextCursor': ...}."""
         params = {"accountId": account_id}
         if cursor:
             params["cursor"] = cursor

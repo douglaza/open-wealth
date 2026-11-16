@@ -2,13 +2,13 @@
 Testes do cliente Pluggy com respostas mockadas.
 Nenhuma chamada real à API acontece — usamos unittest.mock.
 """
+
 import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from app.integrations.pluggy_client import PluggyClient  # <- caminho real
-
 
 # ---------- FIXTURES (respostas simuladas da API) ----------
 
@@ -20,28 +20,47 @@ MOCK_ITEM = {
 }
 
 MOCK_ACCOUNTS = [
-    {"id": "acc-1", "type": "CHECKING", "name": "Conta Corrente",
-     "balance": 5000.0, "currency": "BRL"},
-    {"id": "acc-2", "type": "SAVINGS", "name": "Poupança",
-     "balance": 12000.0, "currency": "BRL"},
+    {
+        "id": "acc-1",
+        "type": "CHECKING",
+        "name": "Conta Corrente",
+        "balance": 5000.0,
+        "currency": "BRL",
+    },
+    {"id": "acc-2", "type": "SAVINGS", "name": "Poupança", "balance": 12000.0, "currency": "BRL"},
 ]
 
 MOCK_INVESTMENTS = [
-    {"id": "inv-1", "name": "Tesouro Selic 2029", "type": "government_bond",
-     "quantity": 1, "price": 15000.0},
-    {"id": "inv-2", "name": "PETR4", "type": "stock",
-     "quantity": 100, "price": 38.50},
+    {
+        "id": "inv-1",
+        "name": "Tesouro Selic 2029",
+        "type": "government_bond",
+        "quantity": 1,
+        "price": 15000.0,
+    },
+    {"id": "inv-2", "name": "PETR4", "type": "stock", "quantity": 100, "price": 38.50},
 ]
 
 MOCK_TRANSACTIONS = [
-    {"id": "tx-1", "description": "Salário", "amount": -8000.0,
-     "date": "2025-01-05", "category": "income"},
-    {"id": "tx-2", "description": "Mercado", "amount": 450.0,
-     "date": "2025-01-07", "category": "groceries"},
+    {
+        "id": "tx-1",
+        "description": "Salário",
+        "amount": -8000.0,
+        "date": "2025-01-05",
+        "category": "income",
+    },
+    {
+        "id": "tx-2",
+        "description": "Mercado",
+        "amount": 450.0,
+        "date": "2025-01-07",
+        "category": "groceries",
+    },
 ]
 
 
 # ---------- FIXTURE DO CLIENTE ----------
+
 
 @pytest.fixture
 def client():
@@ -54,8 +73,8 @@ def client():
 
 # ---------- TESTES ----------
 
-class TestPluggyClient:
 
+class TestPluggyClient:
     def test_get_item(self, client):
         with patch.object(client, "_get", return_value=MOCK_ITEM):
             item = client.get_item("item-123")
@@ -100,6 +119,7 @@ class TestPluggyClient:
 
 # ---------- AUTH ----------
 
+
 def test_init_sem_settings_usa_settings_de_producao():
     """Cobre o fallback: importa settings global quando nada é passado."""
     with patch("app.core.config.settings") as fake_settings:
@@ -127,9 +147,8 @@ def test_authenticate_sucesso(client):
 def test_authenticate_erro_levanta(client):
     resp = MagicMock(status_code=401, text="invalid credentials")
     resp.raise_for_status.side_effect = Exception("401")
-    with patch("requests.post", return_value=resp):
-        with pytest.raises(Exception):
-            client._authenticate()
+    with patch("requests.post", return_value=resp), pytest.raises(Exception):
+        client._authenticate()
 
 
 def test_get_token_reusa_token_valido(client):
@@ -154,6 +173,7 @@ def test_get_token_renova_quando_ausente(client):
 
 # ---------- HTTP CORE ----------
 
+
 def _fake_resp(status=200, payload=None):
     r = MagicMock(status_code=status, text="")
     r.json.return_value = payload or {}
@@ -176,24 +196,27 @@ def test_get_erro_levanta(client):
     client._token_expiry = time.time() + 3600
     resp = _fake_resp(status=500, payload={"error": "boom"})
     resp.raise_for_status.side_effect = Exception("500")
-    with patch("requests.get", return_value=resp):
-        with pytest.raises(Exception):
-            client._get("/accounts")
+    with patch("requests.get", return_value=resp), pytest.raises(Exception):
+        client._get("/accounts")
 
 
 # ---------- EXTRACT ----------
 
+
 def test_extract_results_dict():
     assert PluggyClient._extract_results({"results": [1, 2]}) == [1, 2]
 
+
 def test_extract_results_list():
     assert PluggyClient._extract_results([1, 2]) == [1, 2]
+
 
 def test_extract_results_sem_chave_results():
     assert PluggyClient._extract_results({}) == []
 
 
 # ---------- ENDPOINTS ----------
+
 
 def test_get_item_usa_item_id_do_ambiente(client):
     client._item_id = "item-do-env"
@@ -222,8 +245,7 @@ def test_get_transactions_sem_cursor(client):
 def test_get_transactions_com_cursor(client):
     with patch.object(client, "_get", return_value={"results": []}) as m:
         client.get_transactions("acc-1", cursor="abc")
-    m.assert_called_once_with("/v2/transactions",
-                              params={"accountId": "acc-1", "cursor": "abc"})
+    m.assert_called_once_with("/v2/transactions", params={"accountId": "acc-1", "cursor": "abc"})
 
 
 def test_get_all_transactions_pagina_ate_fim(client):
@@ -238,6 +260,5 @@ def test_get_all_transactions_pagina_ate_fim(client):
 
 
 def test_get_all_transactions_primeira_pagina_vazia(client):
-    with patch.object(client, "get_transactions",
-                      return_value={"results": [], "hasNext": False}):
+    with patch.object(client, "get_transactions", return_value={"results": [], "hasNext": False}):
         assert client.get_all_transactions("acc-1") == []

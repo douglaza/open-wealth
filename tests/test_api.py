@@ -1,4 +1,5 @@
 """Testes da API. FakeClient/FakeRepo no padrão dos testes de sync."""
+
 from datetime import date
 
 import pytest
@@ -7,6 +8,7 @@ from fastapi.testclient import TestClient
 from app.api.main import create_app
 from app.api.routes import get_client, get_repo
 from app.core.exceptions import PluggyError
+from app.domain.models import Position, Snapshot
 
 
 class FakeClient:
@@ -25,9 +27,6 @@ class FakeClient:
         return []
 
 
-from app.domain.models import Snapshot, Position  # ajuste o import ao seu caminho real
-
-
 class FakeRepo:
     def __init__(self):
         self.calls = []
@@ -35,7 +34,7 @@ class FakeRepo:
             Position(
                 institution="Nubank",
                 amount=70.0,
-                account_type="ACCOUNT",       # use whatever values your model expects
+                account_type="ACCOUNT",  # use whatever values your model expects
                 asset_name="Conta Nubank",
                 category="CASH",
             ),
@@ -70,6 +69,7 @@ class FakeRepo:
 
     def commit(self):
         self.calls.append(("commit",))
+
 
 @pytest.fixture
 def client():
@@ -155,6 +155,5 @@ def test_carteira_vazia_retorna_msg(client):
             self.posicoes = []
 
     tc.app.dependency_overrides[get_repo] = lambda: RepoSemSnapshot()
-    for rota in ("/carteira", "/carteira/posicoes",
-                 "/carteira/instituicoes", "/carteira/alocacao"):
+    for rota in ("/carteira", "/carteira/posicoes", "/carteira/instituicoes", "/carteira/alocacao"):
         assert "msg" in tc.get(f"/api/v1{rota}").json()

@@ -1,16 +1,17 @@
 import pandas as pd
-
 import pytest
 
 from dashboard.data import calculate_allocation, prepare_snapshot_data
 
 
 def test_allocation_sums_by_category():
-    latest = pd.DataFrame([
-        {"category": "Renda Fixa", "amount": 90.0},
-        {"category": "Ações", "amount": 20.0},
-        {"category": "Renda Fixa", "amount": 10.0},
-    ])
+    latest = pd.DataFrame(
+        [
+            {"category": "Renda Fixa", "amount": 90.0},
+            {"category": "Ações", "amount": 20.0},
+            {"category": "Renda Fixa", "amount": 10.0},
+        ]
+    )
     alloc = calculate_allocation(latest)
     assert list(alloc["category"]) == ["Renda Fixa", "Ações"]
     assert list(alloc["amount"]) == pytest.approx([100.0, 20.0])
@@ -25,10 +26,13 @@ def test_allocation_empty():
 
 def test_summary_exposes_allocation():
     rows = [
-        {"snapshot_date": "2025-03-05", "institution": "XP",
-         "category": "Renda Fixa", "amount": 110.0},
-        {"snapshot_date": "2025-03-05", "institution": "Rico",
-         "category": "Ações", "amount": 10.0},
+        {
+            "snapshot_date": "2025-03-05",
+            "institution": "XP",
+            "category": "Renda Fixa",
+            "amount": 110.0,
+        },
+        {"snapshot_date": "2025-03-05", "institution": "Rico", "category": "Ações", "amount": 10.0},
     ]
     summary = prepare_snapshot_data(rows)
     assert list(summary.allocation["category"]) == ["Renda Fixa", "Ações"]
@@ -52,11 +56,8 @@ def test_calculate_allocation_groups_categories_and_sorts_by_amount():
     ]
 
 
-
 def test_calculate_allocation_labels_missing_categories():
-    latest_snapshots = pd.DataFrame(
-        {"category": [None, "Ações"], "amount": [25.0, 50.0]}
-    )
+    latest_snapshots = pd.DataFrame({"category": [None, "Ações"], "amount": [25.0, 50.0]})
 
     allocation = calculate_allocation(latest_snapshots)
 
@@ -64,7 +65,6 @@ def test_calculate_allocation_labels_missing_categories():
         {"category": "Ações", "amount": 50.0, "pct": pytest.approx(50.0 / 75.0)},
         {"category": "Não classificado", "amount": 25.0, "pct": pytest.approx(25.0 / 75.0)},
     ]
-
 
 
 def test_calculate_allocation_empty_dataframe():

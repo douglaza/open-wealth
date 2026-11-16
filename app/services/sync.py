@@ -1,4 +1,5 @@
 """Sincroniza dados da Pluggy para o banco local e gera snapshots."""
+
 import logging
 from datetime import date
 
@@ -22,9 +23,7 @@ def sync_weekly(client=None, repo=None):
         item = client.get_item()
         item_id = item["id"]
         connector = item.get("connector") or {}
-        institution = (
-            connector.get("name") or item.get("institution") or "Desconhecida"
-        )
+        institution = connector.get("name") or item.get("institution") or "Desconhecida"
 
         if repo.snapshot_exists(snapshot_date, institution):
             logger.info("snapshot_skipped", extra={"snapshot_date": snapshot_date})

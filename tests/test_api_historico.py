@@ -1,7 +1,7 @@
+from datetime import date
+
 import pytest
 from fastapi.testclient import TestClient
-
-from datetime import date
 
 from app.core.database import get_connection
 from app.domain.models import Position, Snapshot
@@ -16,13 +16,19 @@ def seed_snapshots(repo):
                 Snapshot(
                     snapshot_date=date.fromisoformat(d),
                     positions=[
-                        Position(institution="X", account_type="Y",
-                                 asset_name="Z", category="C", amount=v)
+                        Position(
+                            institution="X",
+                            account_type="Y",
+                            asset_name="Z",
+                            category="C",
+                            amount=v,
+                        )
                     ],
                 )
-                for d, v in zip(datas, valores)
+                for d, v in zip(datas, valores, strict=False)
             ]
         )
+
     return _seed
 
 
@@ -32,6 +38,7 @@ def client():
     from app.api.routes import get_repo
 
     app = create_app()
+
     def get_test_repo():
         conn = get_connection()
         try:
@@ -42,6 +49,7 @@ def client():
     app.dependency_overrides[get_repo] = get_test_repo
     with TestClient(app) as test_client:
         yield test_client
+
 
 def test_evolucao_retorna_200_com_serie(client):
     resp = client.get("/api/v1/historico/evolucao")
@@ -69,7 +77,9 @@ def test_evolucao_com_snapshots_retorna_pontos_corretos(client, seed_snapshots):
 
 def test_filtro_por_periodo(client, seed_snapshots):
     seed_snapshots(["2026-11-01", "2026-12-01"], [100.0, 200.0])
-    resp = client.get("/api/v1/historico/evolucao", params={"inicio": "2026-11-15", "fim": "2026-12-31"})
+    resp = client.get(
+        "/api/v1/historico/evolucao", params={"inicio": "2026-11-15", "fim": "2026-12-31"}
+    )
     assert resp.status_code == 200
     body = resp.json()
     assert body["datas"] == ["2026-12-01"]

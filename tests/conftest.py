@@ -36,6 +36,7 @@ def banco_limpo(tmp_path, monkeypatch):
             conn.execute("DELETE FROM snapshots")
             conn.execute("DELETE FROM items")
 
+
 @pytest.fixture
 def db_conn(banco_limpo):
     """Conexão de teste usando o dialeto selecionado pelo ambiente."""
@@ -68,19 +69,44 @@ def repo(db_conn):
 
 @pytest.fixture
 def repo_com_dados(repo):
-    repo.save_all([
-        Snapshot(snapshot_date=date(2025, 1, 1), positions=[
-            Position(institution="XP", account_type="broker",
-                     asset_name="ITSA4", category="Ações", amount=1000.0),
-        ]),
-        Snapshot(snapshot_date=date(2025, 2, 1), positions=[
-            Position(institution="XP", account_type="broker",
-                     asset_name="ITSA4", category="Ações", amount=1100.0),
-        ]),
-        Snapshot(snapshot_date=date(2025, 3, 1), positions=[
-            Position(institution="XP", account_type="broker",
-                     asset_name="ITSA4", category="Ações", amount=1200.0),
-        ]),
-    ])
+    repo.save_all(
+        [
+            Snapshot(
+                snapshot_date=date(2025, 1, 1),
+                positions=[
+                    Position(
+                        institution="XP",
+                        account_type="broker",
+                        asset_name="ITSA4",
+                        category="Ações",
+                        amount=1000.0,
+                    ),
+                ],
+            ),
+            Snapshot(
+                snapshot_date=date(2025, 2, 1),
+                positions=[
+                    Position(
+                        institution="XP",
+                        account_type="broker",
+                        asset_name="ITSA4",
+                        category="Ações",
+                        amount=1100.0,
+                    ),
+                ],
+            ),
+            Snapshot(
+                snapshot_date=date(2025, 3, 1),
+                positions=[
+                    Position(
+                        institution="XP",
+                        account_type="broker",
+                        asset_name="ITSA4",
+                        category="Ações",
+                        amount=1200.0,
+                    ),
+                ],
+            ),
+        ]
+    )
     return repo
-

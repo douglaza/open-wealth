@@ -28,9 +28,7 @@ ATIVOS = [
 def main():
     conn = get_connection()
     try:
-        row = conn.execute(
-            "SELECT MIN(snapshot_date) AS first_snapshot FROM snapshots"
-        ).fetchone()
+        row = conn.execute("SELECT MIN(snapshot_date) AS first_snapshot FROM snapshots").fetchone()
         data_real = row["first_snapshot"] if row else None
         if data_real is None:
             raise RuntimeError("Não há snapshots reais para usar como referência.")

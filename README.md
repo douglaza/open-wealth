@@ -182,7 +182,26 @@ O dashboard lê a tabela `snapshots`; portanto, precisa de um banco
 inicializado e de snapshots persistidos para exibir dados. Rode o sync
 (`POST /api/v1/sync`) ao menos uma vez antes de abrir.
 
-## Roadmap — Fase 3
+## Operação
+
+### Timer systemd (sync semanal)
+
+`/etc/systemd/system/open-wealth-sync.timer` agenda o sync toda
+segunda-feira às 06:00, com `Persistent=true` (recupera execução
+perdida se a máquina estava desligada).
+
+```bash
+sudo systemctl enable --now open-wealth-sync.timer
+systemctl list-timers open-wealth-sync.timer
+
+- O sync agendado depende do timer systemd da VM; não há retry próprio
+  em caso de falha na chamada à Pluggy (ver retry/backoff abaixo).
+
+![CI](https://github.com/douglaza/open-wealth/actions/workflows/ci.yml/badge.svg)
+![Coverage](https://img.shields.io/badge/coverage-80%25+-brightgreen)
+
+
+## Roadmap
 
 Prioridades planejadas para o próximo ciclo:
 

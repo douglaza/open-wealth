@@ -1,5 +1,5 @@
 def investment_amount(investment: dict) -> float:
-    """Resolve o valor da posição: saldo, quantidade × preço, amount ou zero."""
+    """Resolve o valor da posição: saldo, quantidade X preço, amount ou zero."""
     balance = investment.get("balance")
     if balance is not None:
         return float(balance)

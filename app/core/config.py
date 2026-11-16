@@ -7,8 +7,7 @@ class Settings(BaseSettings):
     pluggy_client_id: str = ""
     pluggy_client_secret: str = ""
     pluggy_base_url: str = "https://api.pluggy.ai"
-    pluggy_item_id: str = ""   # ou None
-
+    pluggy_item_id: str = ""  # ou None
 
 
 settings = Settings()

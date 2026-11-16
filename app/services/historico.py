@@ -39,7 +39,7 @@ def crescimento_acumulado(snapshots: list[Snapshot]) -> SerieHistorica:
     variacoes = []
     for v in serie.valores:
         if v <= 0:
-            variacoes.append(0.0)          # antes da base: sem variação definida
+            variacoes.append(0.0)  # antes da base: sem variação definida
         else:
             variacoes.append((v - base) / base)
     return SerieHistorica(datas=serie.datas, valores=variacoes)

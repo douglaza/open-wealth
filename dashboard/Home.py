@@ -1,12 +1,13 @@
-import sys, pathlib
+import pathlib
+import sys
+
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
-import streamlit as st
 import altair as alt
+import streamlit as st
 
 from app.core.database import get_connection
 from dashboard.data import prepare_snapshot_data
-
 
 st.set_page_config(page_title="OpenWealth", page_icon="📊", layout="wide")
 

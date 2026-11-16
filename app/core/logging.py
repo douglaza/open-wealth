@@ -1,15 +1,16 @@
 # app/core/logging.py
 """Logging estruturado em JSON — um evento por linha."""
+
 import json
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 class JSONFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         payload = {
-            "time": datetime.now(timezone.utc).isoformat(),
+            "time": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "module": record.name,
             "event": record.getMessage(),

@@ -1,7 +1,7 @@
 from datetime import date
 from unittest.mock import MagicMock
 
-from app.services.consolidacao import sync_all, get_totals
+from app.services.consolidacao import get_totals, sync_all
 
 
 def _fake_client():
@@ -56,16 +56,18 @@ class TestValorPosicaoInvestimento:
 
     def test_investment_value_null_usa_balance(self):
         """value null NÃO pode zerar a posição; balance é a fonte da verdade."""
-        client = self._make_client([
-            {
-                "name": "ISUS11 STOCK",
-                "type": "ETF",
-                "balance": 2000.0,
-                "value": None,
-                "amount": 2000.0,
-                "quantity": 1,
-            },
-        ])
+        client = self._make_client(
+            [
+                {
+                    "name": "ISUS11 STOCK",
+                    "type": "ETF",
+                    "balance": 2000.0,
+                    "value": None,
+                    "amount": 2000.0,
+                    "quantity": 1,
+                },
+            ]
+        )
         snapshot = sync_all(client)
 
         pos = next(p for p in snapshot.positions if p.asset_name == "ISUS11 STOCK")
@@ -74,36 +76,40 @@ class TestValorPosicaoInvestimento:
     def test_investment_nao_usa_amount_quando_diverge_de_balance(self):
         """CDR do sandbox: amount=2500 mas balance=2000 (dashboard exibe 2000).
         Usar amount inflaria o patrimônio."""
-        client = self._make_client([
-            {
-                "name": "CDR",
-                "type": "FIXED_INCOME",
-                "subtype": "CDB",
-                "balance": 2000.0,
-                "value": None,
-                "amount": 2500.0,
-            },
-        ])
+        client = self._make_client(
+            [
+                {
+                    "name": "CDR",
+                    "type": "FIXED_INCOME",
+                    "subtype": "CDB",
+                    "balance": 2000.0,
+                    "value": None,
+                    "amount": 2500.0,
+                },
+            ]
+        )
         snapshot = sync_all(client)
 
         pos = next(p for p in snapshot.positions if p.asset_name == "CDR")
         assert pos.amount == 2000.0, "posição deve usar balance (2000), não amount (2500)"
 
     def test_investment_balance_ausente_faz_fallback_para_amount(self):
-        """Sem balance, usa quantity × price; depois amount, sem usar value."""
-        client = self._make_client([
-            {
-                "name": "X",
-                "type": "ETF",
-                "balance": None,
-                "quantity": 10.0,
-                "price": 10.0,
-                "value": 150.0,
-                "amount": 1500.0,
-            },
-            {"name": "Z", "type": "ETF", "balance": None, "amount": 1500.0},
-            {"name": "Y", "type": "ETF", "balance": None, "value": None},
-        ])
+        """Sem balance, usa quantity X price; depois amount, sem usar value."""
+        client = self._make_client(
+            [
+                {
+                    "name": "X",
+                    "type": "ETF",
+                    "balance": None,
+                    "quantity": 10.0,
+                    "price": 10.0,
+                    "value": 150.0,
+                    "amount": 1500.0,
+                },
+                {"name": "Z", "type": "ETF", "balance": None, "amount": 1500.0},
+                {"name": "Y", "type": "ETF", "balance": None, "value": None},
+            ]
+        )
         snapshot = sync_all(client)
         valores = {p.asset_name: p.amount for p in snapshot.positions}
         assert valores["X"] == 100.0
@@ -111,11 +117,18 @@ class TestValorPosicaoInvestimento:
         assert valores["Y"] == 0.0
 
     def test_agregacao_soma_valores_apos_cascata(self):
-        client = self._make_client([
-            {"name": "CDB", "type": "FIXED_INCOME", "balance": 2000.0,
-            "value": None, "amount": 2500.0},
-            {"name": "ETF", "type": "ETF", "balance": None, "value": 150.0, "amount": 800.0},
-        ])
+        client = self._make_client(
+            [
+                {
+                    "name": "CDB",
+                    "type": "FIXED_INCOME",
+                    "balance": 2000.0,
+                    "value": None,
+                    "amount": 2500.0,
+                },
+                {"name": "ETF", "type": "ETF", "balance": None, "value": 150.0, "amount": 800.0},
+            ]
+        )
         snapshot = sync_all(client)
         totals = get_totals(snapshot)
         assert totals["by_institution"]["BANCO BTG PACTUAL S/A"] == 2800.0
@@ -123,16 +136,18 @@ class TestValorPosicaoInvestimento:
 
 def test_cartao_negativo_e_dívida():
     snapshot = sync_all(_fake_client())
-    cartao = [p for p in snapshot.positions if p.account_type == "CREDIT"][0]
-    assert cartao.amount == -1006.2        # dívida preservada, não clampada
+    cartao = next(p for p in snapshot.positions if p.account_type == "CREDIT")
+    assert cartao.amount == -1006.2  # dívida preservada, não clampada
     patrimonios = [p for p in snapshot.positions if p.account_type != "CREDIT"]
     assert all(p.amount >= 0 for p in patrimonios)
 
 
 def get_investments(self, item_id):
-    return [{
-        "name": "CDB",
-        "type": "FIXED_INCOME",
-        "balance": 10000.0,
-        "value": 1.0,
-    }]
+    return [
+        {
+            "name": "CDB",
+            "type": "FIXED_INCOME",
+            "balance": 10000.0,
+            "value": 1.0,
+        }
+    ]

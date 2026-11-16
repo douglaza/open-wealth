@@ -6,11 +6,19 @@ from app.domain.models import Position, Snapshot
 
 
 def _snapshot(d: date, amounts: list[float]) -> Snapshot:
-    return Snapshot(snapshot_date=d, positions=[
-        Position(institution="Banco X", account_type="conta",
-                 asset_name=f"Ativo {i}", category="Conta", amount=a)
-        for i, a in enumerate(amounts)
-    ])
+    return Snapshot(
+        snapshot_date=d,
+        positions=[
+            Position(
+                institution="Banco X",
+                account_type="conta",
+                asset_name=f"Ativo {i}",
+                category="Conta",
+                amount=a,
+            )
+            for i, a in enumerate(amounts)
+        ],
+    )
 
 
 def test_save_and_get_latest(banco_limpo, repo):
@@ -29,7 +37,7 @@ def test_save_same_day_twice_does_not_duplicate(banco_limpo, repo):
     repo.save(_snapshot(d, [200.0, 300.0]))  # upsert
 
     loaded = repo.get_latest()
-    assert loaded.total == 500.0          # não 100+200+300
+    assert loaded.total == 500.0  # não 100+200+300
     assert len(loaded.positions) == 2
 
 
@@ -53,7 +61,8 @@ def test_get_latest_sem_dados_retorna_none(repo):  # use a fixture que você já
 
 def test_main_historico_integrado(repo_com_dados, monkeypatch, capsys):
     """Cobre o parser, subcomandos e dispatch do main()."""
-    import app.cli as cli
+    from app import cli
+
     monkeypatch.setattr(cli, "get_connection", lambda *a, **kw: repo_com_dados._conn)
     monkeypatch.setattr("sys.argv", ["open-wealth", "historico", "-g", "diaria"])
     cli.main()
@@ -63,7 +72,8 @@ def test_main_historico_integrado(repo_com_dados, monkeypatch, capsys):
 
 def test_main_granularidade_default(repo, monkeypatch, capsys):
     """Sem -g, cai em 'mensal' (default) e o parser roda."""
-    import app.cli as cli
+    from app import cli
+
     monkeypatch.setattr(cli, "get_connection", lambda *a, **kw: repo._conn)
     monkeypatch.setattr("sys.argv", ["open-wealth", "historico"])
     cli.main()
@@ -76,6 +86,7 @@ def test_save_all_rollback_em_erro(banco_limpo, repo, monkeypatch):
 
     class _ConnProxy:
         """Delega tudo ao conn real, mas explode no executemany."""
+
         def __init__(self, conn):
             self._conn = conn
 
@@ -93,6 +104,7 @@ def test_save_all_rollback_em_erro(banco_limpo, repo, monkeypatch):
     # garante que o DELETE foi revertido
     assert repo.get_all() == []
 
+
 def test_upsert_snapshot_rollback_em_erro(banco_limpo, repo):
     repo.upsert_item({"id": "1", "connector": {"name": "Banco X"}}, date(2025, 1, 1))
     repo._conn.commit()
@@ -106,32 +118,30 @@ def test_upsert_snapshot_rollback_em_erro(banco_limpo, repo):
             date(2025, 1, 2),
         )
 
-    row = repo._conn.execute(
-        "SELECT institution, updated_at FROM items WHERE id = '1'"
-    ).fetchone()
+    row = repo._conn.execute("SELECT institution, updated_at FROM items WHERE id = '1'").fetchone()
     assert row["institution"] == "Banco X"
     assert row["updated_at"] == "2025-01-01"
 
 
 def test_upsert_account_aceita_date(banco_limpo, repo):
-    repo.upsert_snapshot([], date.today())          # garante item de contexto
+    repo.upsert_snapshot([], date.today())  # garante item de contexto
     repo.upsert_item({"id": "it1"}, date.today())
     repo.upsert_account(
-        {"id": "acc1", "balance": 250.0}, item_id="it1",
-        snapshot_date=date.today(),                  # <-- date, não str
+        {"id": "acc1", "balance": 250.0},
+        item_id="it1",
+        snapshot_date=date.today(),  # <-- date, não str
     )
-    row = repo._conn.execute(
-        "SELECT balance FROM accounts WHERE id = 'acc1'").fetchone()
+    row = repo._conn.execute("SELECT balance FROM accounts WHERE id = 'acc1'").fetchone()
     assert row["balance"] == 250.0
 
 
 def test_upsert_investment_aceita_date(banco_limpo, repo):
     repo.upsert_item({"id": "it1"}, date.today())
     repo.upsert_investment(
-        {"id": "inv1", "quantity": 10, "price": 5.0}, item_id="it1",
-        snapshot_date=date.today(),                  # <-- date, não str
+        {"id": "inv1", "quantity": 10, "price": 5.0},
+        item_id="it1",
+        snapshot_date=date.today(),  # <-- date, não str
     )
-    row = repo._conn.execute(
-        "SELECT quantity, value FROM investments WHERE id = 'inv1'").fetchone()
+    row = repo._conn.execute("SELECT quantity, value FROM investments WHERE id = 'inv1'").fetchone()
     assert row["quantity"] == 10
     assert row["value"] == 50.0

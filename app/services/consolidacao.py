@@ -1,9 +1,8 @@
 from datetime import date
 
 # from app.models.snapshot import Snapshot, Position
-from app.domain.models import Snapshot, Position
+from app.domain.models import Position, Snapshot
 from app.domain.valuation import investment_amount
-
 
 INVESTMENT_TYPES = {"SECURITY", "MUTUAL_FUND", "FIXED_INCOME", "ETF", "EQUITY"}
 CAIXA_TYPES = {"BANK"}
@@ -18,7 +17,7 @@ def _map_category(acc: dict) -> str:
         return "investimento"
     if t in CAIXA_TYPES:
         return "banco"
-    return "outros"   # type desconhecido NUNCA vira caixa silenciosamente
+    return "outros"  # type desconhecido NUNCA vira caixa silenciosamente
 
 
 def _connector_name(item: dict) -> str:
@@ -47,13 +46,15 @@ def _build_positions(accounts: list, investments: list, institution: str) -> lis
         if category == "investimento":
             continue  # posição de investimento entra só via get_investments
         balance = acc.get("balance")
-        positions.append(Position(
-            institution=institution,
-            account_type=acc.get("type") or "account",
-            asset_name=acc.get("name") or "Conta sem nome",
-            category=category,
-            amount=float(balance) if balance is not None else 0.0,
-        ))
+        positions.append(
+            Position(
+                institution=institution,
+                account_type=acc.get("type") or "account",
+                asset_name=acc.get("name") or "Conta sem nome",
+                category=category,
+                amount=float(balance) if balance is not None else 0.0,
+            )
+        )
 
     for inv in investments or []:
         positions.append(
@@ -65,7 +66,6 @@ def _build_positions(accounts: list, investments: list, institution: str) -> lis
                 amount=_investment_amount(inv),
             )
         )
-
 
     return positions
 
@@ -93,9 +93,7 @@ def get_totals(snapshot: Snapshot) -> dict:
     """Total geral + agregação por instituição."""
     by_institution: dict[str, float] = {}
     for p in snapshot.positions:
-        by_institution[p.institution] = (
-            by_institution.get(p.institution, 0.0) + p.amount
-        )
+        by_institution[p.institution] = by_institution.get(p.institution, 0.0) + p.amount
 
     return {
         "total": sum(by_institution.values()),

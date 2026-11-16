@@ -1,4 +1,5 @@
 """Persistência de snapshots e posições. Fala negócio, não SQL espalhado."""
+
 from datetime import date
 
 from app.core.database import _is_postgres, get_connection
@@ -36,10 +37,14 @@ class SnapshotRepository:
                 [
                     (
                         s.snapshot_date.isoformat(),
-                        p.institution, p.account_type,
-                        p.asset_name, p.category, p.amount,
+                        p.institution,
+                        p.account_type,
+                        p.asset_name,
+                        p.category,
+                        p.amount,
                     )
-                    for s in snapshots for p in s.positions
+                    for s in snapshots
+                    for p in s.positions
                 ],
             )
             self._conn.commit()
@@ -54,23 +59,35 @@ class SnapshotRepository:
                (snapshot_date, institution, account_type, asset_name, category, amount)
                VALUES (?, ?, ?, ?, ?, ?)""",
             [
-                (s.snapshot_date.isoformat(), p.institution, p.account_type,
-                 p.asset_name, p.category, p.amount)
-                for s in snapshots for p in s.positions
+                (
+                    s.snapshot_date.isoformat(),
+                    p.institution,
+                    p.account_type,
+                    p.asset_name,
+                    p.category,
+                    p.amount,
+                )
+                for s in snapshots
+                for p in s.positions
             ],
         )
         self._conn.commit()
 
     def snapshot_exists(self, snapshot_date: str, institution: str) -> bool:
-        return self._conn.execute(
-            "SELECT 1 FROM snapshots WHERE snapshot_date = ? AND institution = ?",
-            (snapshot_date, institution),
-        ).fetchone() is not None
+        return (
+            self._conn.execute(
+                "SELECT 1 FROM snapshots WHERE snapshot_date = ? AND institution = ?",
+                (snapshot_date, institution),
+            ).fetchone()
+            is not None
+        )
 
-    def save_snapshot_row(self, snapshot_date, institution, account_type,
-                          asset_name, category, amount) -> None:
+    def save_snapshot_row(
+        self, snapshot_date, institution, account_type, asset_name, category, amount
+    ) -> None:
         self._conn.execute(
-            "INSERT INTO snapshots (snapshot_date, institution, account_type, asset_name, category, amount) "
+            "INSERT INTO snapshots "
+            "(snapshot_date, institution, account_type, asset_name, category, amount) "
             "VALUES (?,?,?,?,?,?)",
             (snapshot_date, institution, account_type, asset_name, category, amount),
         )
@@ -85,9 +102,7 @@ class SnapshotRepository:
         return self._rows_to_snapshots(rows)[0]
 
     def get_all(self) -> list[Snapshot]:
-        rows = self._conn.execute(
-            "SELECT * FROM snapshots ORDER BY snapshot_date"
-        ).fetchall()
+        rows = self._conn.execute("SELECT * FROM snapshots ORDER BY snapshot_date").fetchall()
         return self._rows_to_snapshots(rows)
 
     def get_between(self, inicio: str | date | None, fim: str | date | None) -> list[Snapshot]:
@@ -145,13 +160,15 @@ class SnapshotRepository:
         by_date: dict[date, list[Position]] = {}
         for r in rows:
             d = date.fromisoformat(r["snapshot_date"])
-            by_date.setdefault(d, []).append(Position(
-                institution=r["institution"],
-                account_type=r["account_type"],
-                asset_name=r["asset_name"],
-                category=r["category"],
-                amount=r["amount"],
-            ))
+            by_date.setdefault(d, []).append(
+                Position(
+                    institution=r["institution"],
+                    account_type=r["account_type"],
+                    asset_name=r["asset_name"],
+                    category=r["category"],
+                    amount=r["amount"],
+                )
+            )
         return [Snapshot(snapshot_date=d, positions=ps) for d, ps in by_date.items()]
 
     # ------------------------------------------------------------------
@@ -172,7 +189,9 @@ class SnapshotRepository:
             snapshot_date = snapshot_date.isoformat()
         self._conn.execute(
             """INSERT INTO items (id, institution, updated_at) VALUES (?,?,?)
-            ON CONFLICT(id) DO UPDATE SET institution=excluded.institution, updated_at=excluded.updated_at""",
+            ON CONFLICT(id) DO UPDATE SET
+                institution = excluded.institution,
+                updated_at = excluded.updated_at""",
             (item["id"], item.get("connector", {}).get("name", ""), snapshot_date),
         )
 
@@ -184,8 +203,15 @@ class SnapshotRepository:
                VALUES (?,?,?,?,?,?,?)
                ON CONFLICT(id) DO UPDATE SET
                  balance=excluded.balance, updated_at=excluded.updated_at""",
-            (acc["id"], item_id, acc.get("name", ""), acc.get("type"),
-             acc.get("balance", 0), acc.get("currency", "BRL"), snapshot_date),
+            (
+                acc["id"],
+                item_id,
+                acc.get("name", ""),
+                acc.get("type"),
+                acc.get("balance", 0),
+                acc.get("currency", "BRL"),
+                snapshot_date,
+            ),
         )
 
     def upsert_investment(self, inv: dict, item_id: str, snapshot_date: str | date) -> None:
@@ -200,8 +226,16 @@ class SnapshotRepository:
                ON CONFLICT(id) DO UPDATE SET
                  quantity=excluded.quantity, price=excluded.price,
                  value=excluded.value, updated_at=excluded.updated_at""",
-            (inv["id"], item_id, inv.get("name", ""), inv.get("type"),
-                  qty, price, value, snapshot_date),
+            (
+                inv["id"],
+                item_id,
+                inv.get("name", ""),
+                inv.get("type"),
+                qty,
+                price,
+                value,
+                snapshot_date,
+            ),
         )
 
     def commit(self) -> None:
@@ -262,10 +296,7 @@ class SnapshotRepository:
             )
             cols = {row["column_name"] for row in rows}
         else:
-            cols = {
-                row[1]
-                for row in self._conn.execute("PRAGMA table_info(items)")
-            }
+            cols = {row[1] for row in self._conn.execute("PRAGMA table_info(items)")}
         if "updated_at" not in cols:
             self._conn.execute("ALTER TABLE items ADD COLUMN updated_at TEXT")
         self._conn.commit()

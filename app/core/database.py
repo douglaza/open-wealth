@@ -78,6 +78,7 @@ class _PostgresConn:
     def __init__(self):
         import psycopg
         from psycopg.rows import dict_row
+
         self._conn = psycopg.connect(_database_url(), row_factory=dict_row)
 
     def execute(self, sql, params=()):

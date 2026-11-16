@@ -2,9 +2,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.routes import router
 from app.core.database import init_db
 from app.core.scheduler import start_scheduler, stop_scheduler
-from app.api.routes import router
 from app.repositories.snapshot_repository import SnapshotRepository
 
 

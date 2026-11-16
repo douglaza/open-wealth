@@ -4,9 +4,9 @@ from datetime import date, timedelta
 from app.core.database import get_connection
 from app.repositories.snapshot_repository import SnapshotRepository
 from app.services.historico import (
-    evolucao_patrimonial,
-    evolucao_mensal,
     crescimento_acumulado,
+    evolucao_mensal,
+    evolucao_patrimonial,
 )
 
 
@@ -20,7 +20,7 @@ def _imprimir(titulo: str, datas: list[str], valores: list[float], fmt) -> None:
     if not datas:
         print("(sem dados)")
         return
-    for d, v in zip(datas, valores):
+    for d, v in zip(datas, valores, strict=False):
         print(f"  {d:<10} {fmt(v)}")
 
 
@@ -50,8 +50,9 @@ def main() -> None:
     sub = parser.add_subparsers(dest="comando", required=True)
 
     hist = sub.add_parser("historico", help="Evolução do patrimônio ao longo do tempo")
-    hist.add_argument("-g", "--granularidade",
-                      choices=["diaria", "mensal", "acumulado"], default="mensal")
+    hist.add_argument(
+        "-g", "--granularidade", choices=["diaria", "mensal", "acumulado"], default="mensal"
+    )
     hist.set_defaults(func=cmd_historico)
 
     args = parser.parse_args()

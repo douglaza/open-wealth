@@ -1,10 +1,9 @@
-from datetime import timedelta
 from collections.abc import Mapping, Sequence
-from typing import Any
 from dataclasses import dataclass
+from datetime import timedelta
+from typing import Any
 
 import pandas as pd
-
 
 EXCLUDED_CATEGORIES = frozenset({"banco", "cartao"})
 """Categorias não-investimento, para visões específicas como investimentos."""

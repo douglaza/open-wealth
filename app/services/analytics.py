@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from typing import Optional
 
 # Normalização de categorias do Pluggy → classes de ativo do relatório
 CATEGORY_MAP = {
@@ -28,11 +27,11 @@ CATEGORY_MAP = {
     "real estate fund": "FIIs",
     "etf": "ETFs",
     "etfs": "ETFs",
-    "banco": "Caixa"
+    "banco": "Caixa",
 }
 
 
-def normalize_category(raw: Optional[str]) -> str:
+def normalize_category(raw: str | None) -> str:
     if not raw:
         return "Outros"
     return CATEGORY_MAP.get(raw.strip().lower(), raw.strip())
@@ -42,15 +41,13 @@ def _serie_ordenada(serie: list[tuple[date, Decimal]]) -> list[tuple[date, Decim
     return sorted(serie, key=lambda p: p[0])
 
 
-def patrimonio_atual(serie: list[tuple[date, Decimal]]) -> Optional[Decimal]:
+def patrimonio_atual(serie: list[tuple[date, Decimal]]) -> Decimal | None:
     """Total mais recente da série. None se série vazia."""
     serie = _serie_ordenada(serie)
     return serie[-1][1] if serie else None
 
 
-def _snapshot_proximo(
-    serie: list[tuple[date, Decimal]], alvo: date
-) -> Optional[tuple[date, Decimal]]:
+def _snapshot_proximo(serie: list[tuple[date, Decimal]], alvo: date) -> tuple[date, Decimal] | None:
     """Snapshot com data mais próxima do alvo (≤ alvo)."""
     anteriores = [p for p in serie if p[0] <= alvo]
     return max(anteriores, key=lambda p: p[0]) if anteriores else None
@@ -59,8 +56,8 @@ def _snapshot_proximo(
 def rentabilidade_por_periodo(
     serie: list[tuple[date, Decimal]],
     inicio: date,
-    fim: Optional[date] = None,
-) -> Optional[float]:
+    fim: date | None = None,
+) -> float | None:
     """Retorno % entre o snapshot mais próximo de `inicio` e o último ≤ `fim`.
 
     Regras de negócio:
@@ -79,13 +76,11 @@ def rentabilidade_por_periodo(
     return float((final[1] - base[1]) / base[1]) * 100
 
 
-def rentabilidade_30d(serie: list[tuple[date, Decimal]]) -> Optional[float]:
-    return rentabilidade_por_periodo(
-        serie, date.fromordinal(date.today().toordinal() - 30)
-    )
+def rentabilidade_30d(serie: list[tuple[date, Decimal]]) -> float | None:
+    return rentabilidade_por_periodo(serie, date.fromordinal(date.today().toordinal() - 30))
 
 
-def rentabilidade_ytd(serie: list[tuple[date, Decimal]]) -> Optional[float]:
+def rentabilidade_ytd(serie: list[tuple[date, Decimal]]) -> float | None:
     hoje = date.today()
     return rentabilidade_por_periodo(serie, date(hoje.year, 1, 1), hoje)
 
@@ -103,29 +98,33 @@ def alocacao_por_classe(
         if valor <= 0:
             continue
         classe = normalize_category(raw)
-        agregado[classe] = agregado.get(classe, Decimal("0")) + valor
+        agregado[classe] = agregado.get(classe, Decimal(0)) + valor
     total = sum(agregado.values())
     if total == 0:
         return []
     return [
-        {"classe": classe, "valor": float(valor), "percentual": round(float(valor / total * 100), 1)}
+        {
+            "classe": classe,
+            "valor": float(valor),
+            "percentual": round(float(valor / total * 100), 1),
+        }
         for classe, valor in sorted(agregado.items(), key=lambda kv: -kv[1])
     ]
 
 
 def concentracao(
     distribuicao: list[tuple[str, Decimal]],
-) -> Optional[dict]:
+) -> dict | None:
     """Concentração por instituição: top-1 % e índice HHI.
 
-    HHI = soma dos quadrados das participações (%), escala 0–10.000
+    HHI = soma dos quadrados das participações (%), escala 0-10.000
     (convenção DOJ para mercados; > 2500 = "altamente concentrado").
     """
     agregado: dict[str, Decimal] = {}
     for inst, valor in distribuicao:
         if valor <= 0:
             continue
-        agregado[inst] = agregado.get(inst, Decimal("0")) + valor
+        agregado[inst] = agregado.get(inst, Decimal(0)) + valor
     total = sum(agregado.values())
     if not agregado or total == 0:
         return None
@@ -137,7 +136,9 @@ def concentracao(
         "top1_percentual": round(float(top1[1] / total * 100), 1),
         "n_instituicoes": len(agregado),
         "hhi": hhi,
-        "classificacao": "altamente concentrado" if hhi > 2500
-                         else "moderadamente concentrado" if hhi > 1500
-                         else "distribuído",
+        "classificacao": "altamente concentrado"
+        if hhi > 2500
+        else "moderadamente concentrado"
+        if hhi > 1500
+        else "distribuído",
     }

@@ -1,14 +1,15 @@
 """Endpoints da API. Orquestram serviços — não tocam em SQL nem no cliente."""
+
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 
 from app.repositories.snapshot_repository import SnapshotRepository
-from app.services.sync import sync_weekly
 from app.services.historico import (
-    evolucao_patrimonial,
     crescimento_acumulado,
+    evolucao_patrimonial,
 )
+from app.services.sync import sync_weekly
 
 router = APIRouter(prefix="/api/v1")
 
@@ -19,6 +20,7 @@ def get_repo() -> SnapshotRepository:
 
 def get_client():
     from app.integrations.pluggy_client import PluggyClient
+
     return PluggyClient()
 
 
@@ -32,6 +34,7 @@ def post_sync(
 
 
 # ---- Histórico ----
+
 
 @router.get("/historico/evolucao")
 def get_evolucao(
@@ -53,8 +56,8 @@ def get_acumulado(
     return crescimento_acumulado(snapshots)
 
 
-
 # ---- Carteira (snapshot atual) ----
+
 
 @router.get("/carteira")
 def get_carteira(repo: SnapshotRepository = Depends(get_repo)):
