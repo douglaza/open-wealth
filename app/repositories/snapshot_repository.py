@@ -3,6 +3,7 @@ from datetime import date
 
 from app.core.database import _is_postgres, get_connection
 from app.domain.models import Position, Snapshot
+from app.domain.valuation import investment_amount
 
 
 class SnapshotRepository:
@@ -192,6 +193,7 @@ class SnapshotRepository:
             snapshot_date = snapshot_date.isoformat()
         qty = inv.get("quantity") or 0
         price = inv.get("price") or 0
+        value = investment_amount(inv)
         self._conn.execute(
             """INSERT INTO investments (id, item_id, name, type, quantity, price, value, updated_at)
                VALUES (?,?,?,?,?,?,?,?)
@@ -199,7 +201,7 @@ class SnapshotRepository:
                  quantity=excluded.quantity, price=excluded.price,
                  value=excluded.value, updated_at=excluded.updated_at""",
             (inv["id"], item_id, inv.get("name", ""), inv.get("type"),
-             qty, price, qty * price, snapshot_date),
+                  qty, price, value, snapshot_date),
         )
 
     def commit(self) -> None:

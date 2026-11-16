@@ -90,14 +90,24 @@ class TestValorPosicaoInvestimento:
         assert pos.amount == 2000.0, "posição deve usar balance (2000), não amount (2500)"
 
     def test_investment_balance_ausente_faz_fallback_para_amount(self):
-        """Cascata nova: balance → amount → 0. 'value' é qtd de cotas, nunca usado."""
+        """Sem balance, usa quantity × price; depois amount, sem usar value."""
         client = self._make_client([
-            {"name": "X", "type": "ETF", "balance": None, "value": 150.0, "amount": 1500.0},
+            {
+                "name": "X",
+                "type": "ETF",
+                "balance": None,
+                "quantity": 10.0,
+                "price": 10.0,
+                "value": 150.0,
+                "amount": 1500.0,
+            },
+            {"name": "Z", "type": "ETF", "balance": None, "amount": 1500.0},
             {"name": "Y", "type": "ETF", "balance": None, "value": None},
         ])
         snapshot = sync_all(client)
         valores = {p.asset_name: p.amount for p in snapshot.positions}
-        assert valores["X"] == 1500.0
+        assert valores["X"] == 100.0
+        assert valores["Z"] == 1500.0
         assert valores["Y"] == 0.0
 
     def test_agregacao_soma_valores_apos_cascata(self):

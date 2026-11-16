@@ -2,6 +2,7 @@ from datetime import date
 
 # from app.models.snapshot import Snapshot, Position
 from app.domain.models import Snapshot, Position
+from app.domain.valuation import investment_amount
 
 
 INVESTMENT_TYPES = {"SECURITY", "MUTUAL_FUND", "FIXED_INCOME", "ETF", "EQUITY"}
@@ -103,13 +104,8 @@ def get_totals(snapshot: Snapshot) -> dict:
 
 
 def _investment_amount(inv: dict) -> float:
-    """'balance' é a fonte da verdade. 'value' é QUANTIDADE de cotas — nunca usar.
-    'amount' é o valor aplicado; serve como fallback conservador."""
-    for k in ("balance", "amount"):
-        v = inv.get(k)
-        if v is not None:
-            return float(v)
-    return 0.0
+    """Resolve o valor de uma posição de investimento."""
+    return investment_amount(inv)
 
 
 # def _investment_amount(inv: dict) -> float:
@@ -126,4 +122,3 @@ def _investment_amount(inv: dict) -> float:
 #     if qty is not None and price is not None:
 #         return float(qty) * float(price)
 #     return 0.0
-

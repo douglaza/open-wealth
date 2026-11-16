@@ -98,7 +98,29 @@ class TestUpsertsDadosCruos:
     def test_upsert_investment_calcula_value(self, repo):
         repo.upsert_item({"id": "i1", "connector": {"name": "XP"}}, "2025-01-01")
         repo.upsert_investment(
-            {"id": "v1", "name": "HGLG11", "quantity": 10, "price": 160.0},
+            {
+                "id": "v1",
+                "name": "HGLG11",
+                "quantity": 10,
+                "price": 160.0,
+                "balance": 60.0,
+                "amount": 1700.0,
+            },
+            item_id="i1", snapshot_date="2025-01-01",
+        )
+        row = dict(repo._conn.execute("SELECT * FROM investments WHERE id='v1'").fetchone())
+        assert row["value"] == 60.0
+
+    def test_upsert_investment_fallback_usa_quantidade_vezes_preco(self, repo):
+        repo.upsert_item({"id": "i1", "connector": {"name": "XP"}}, "2025-01-01")
+        repo.upsert_investment(
+            {
+                "id": "v1",
+                "name": "HGLG11",
+                "quantity": 10,
+                "price": 160.0,
+                "amount": 1700.0,
+            },
             item_id="i1", snapshot_date="2025-01-01",
         )
         row = dict(repo._conn.execute("SELECT * FROM investments WHERE id='v1'").fetchone())

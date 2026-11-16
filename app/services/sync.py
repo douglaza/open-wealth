@@ -4,7 +4,7 @@ from datetime import date
 
 from app.integrations.pluggy_client import PluggyClient
 from app.repositories.snapshot_repository import SnapshotRepository
-from app.services.consolidacao import _map_category
+from app.services.consolidacao import _investment_amount, _map_category
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +55,14 @@ def sync_weekly(client=None, repo=None):
             repo.upsert_account(account, item_id, snapshot_date)
 
         for investment in investments:
+            repo.save_snapshot_row(
+                snapshot_date,
+                institution,
+                "investment",
+                investment.get("name") or "Investimento sem nome",
+                investment.get("type") or "INVESTMENT",
+                _investment_amount(investment),
+            )
             repo.upsert_investment(investment, item_id, snapshot_date)
 
         repo.commit()

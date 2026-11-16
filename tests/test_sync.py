@@ -17,7 +17,14 @@ class FakeClient:
         {"id": "acc-1", "name": "Corrente", "type": "checking", "balance": 100.0, "currency": "BRL"},
     ]
     DEFAULT_INVESTMENTS = [
-        {"id": "i1", "name": "CDB", "type": "banco", "quantity": 1.0, "price": 50.0},
+        {
+            "id": "i1",
+            "name": "CDB",
+            "type": "banco",
+            "quantity": 1.0,
+            "price": 50.0,
+            "balance": 60.0,
+        },
     ]
 
     def __init__(self, item=None, accounts=None, investments=None):
@@ -99,6 +106,7 @@ def test_sync_flows_through_dependencies(caplog):
         "upsert_item",
         "save_snapshot_row",
         "upsert_account",
+        "save_snapshot_row",
         "upsert_investment",
         "commit",
     ]
@@ -136,7 +144,14 @@ def test_sync_weekly_com_sqlite_real(banco_limpo, mocker):
             {"id": "acc-2", "name": "Poupança", "type": "SAVINGS", "balance": 500.0, "currency": "BRL"},
         ],
         investments=[
-            {"id": "inv-1", "name": "Tesouro IPCA", "type": "fixed_income", "quantity": 2.0, "price": 100.0},
+            {
+                "id": "inv-1",
+                "name": "Tesouro IPCA",
+                "type": "fixed_income",
+                "quantity": 2.0,
+                "price": 100.0,
+                "balance": 60.0,
+            },
         ],
     )
     repo = SnapshotRepository()
@@ -145,9 +160,11 @@ def test_sync_weekly_com_sqlite_real(banco_limpo, mocker):
 
     # snapshots gravados
     rows = repo._conn.execute("SELECT * FROM snapshots").fetchall()
-    assert len(rows) == 2
+    assert len(rows) == 3
     total = sum(r["amount"] for r in rows)
-    assert total == 1500.0
+    assert total == 1560.0
+    investment_row = next(r for r in rows if r["account_type"] == "investment")
+    assert investment_row["amount"] == 60.0
     assert all(r["institution"] == "Banco X" for r in rows)
 
     # accounts upsertadas
@@ -158,12 +175,12 @@ def test_sync_weekly_com_sqlite_real(banco_limpo, mocker):
     # investments com value calculado (qty * price)
     invs = repo._conn.execute("SELECT * FROM investments").fetchall()
     assert len(invs) == 1
-    assert invs[0]["value"] == 200.0
+    assert invs[0]["value"] == 60.0
 
     # rodar de novo no mesmo dia = idempotente (não duplica)
     sync_weekly(client=client, repo=repo)
     rows = repo._conn.execute("SELECT * FROM snapshots").fetchall()
-    assert len(rows) == 2
+    assert len(rows) == 3
 
 
 def make_client():
@@ -219,3 +236,40 @@ def test_get_network_error_vira_pluggy_error(mocker, exc):
         client._get("/items/x")
 
 
+# def test_snapshot_includes_investments(monkeypatch, fake_repo, fake_client):
+#     # client retorna 1 conta + 1 investimento; repo falso captura save_snapshot_row
+#     sync_weekly(client=fake_client, repo=fake_repo)
+#     rows = fake_repo.snapshot_rows
+#     cats = {r.category for r in rows}
+#     assert "SECURITY" in cats  # falha ruidosamente se investimentos sumirem
+
+
+# def test_snapshot_includes_investments(fake_client, fake_repo):
+#     sync_weekly(client=fake_client, repo=fake_repo)
+#     rows = fake_repo.snapshot_rows
+#     cats = {r.category for r in rows}
+#     assert "SECURITY" in cats, "investimentos sumiram do snapshot"
+#     inv_row = next(r for r in rows if r.category == "SECURITY")
+#     assert inv_row.acc_type == "investment"
+#     assert inv_row.amount == 11720.42   # balance, não value/cotas
+
+def test_snapshot_includes_investments():
+    client = FakeClient(
+        investments=[
+            {"id": "i1", "name": "PGBL", "type": "SECURITY",
+             "balance": 11720.42, "quantity": None, "price": None, "value": 3.6},
+        ],
+    )
+    repo = SnapshotRepository()
+    sync_weekly(client=client, repo=repo)
+
+    rows = repo._conn.execute(
+        "SELECT * FROM snapshots WHERE category = 'SECURITY'"
+    ).fetchall()
+    assert len(rows) == 1
+    assert rows[0]["amount"] == 11720.42      # balance, não cotas
+    assert rows[0]["account_type"] == "investment"
+    investment = repo._conn.execute(
+        "SELECT value FROM investments WHERE id = 'i1'"
+    ).fetchone()
+    assert investment["value"] == 11720.42

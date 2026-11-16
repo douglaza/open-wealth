@@ -7,14 +7,19 @@ import pandas as pd
 
 
 EXCLUDED_CATEGORIES = frozenset({"banco", "cartao"})
-"""Categorias não relacionadas a investimentos, excluídas dos agregados do dashboard."""
+"""Categorias não-investimento, para visões específicas como investimentos."""
 
 
-def _hygienize(rows: list[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
+def _hygienize(
+    rows: list[Mapping[str, Any]],
+    excluded: frozenset[str] | None,
+) -> list[Mapping[str, Any]]:
+    if not excluded:
+        return rows
     return [
         row
         for row in rows
-        if dict(row).get("category") not in EXCLUDED_CATEGORIES
+        if str(dict(row).get("category") or "").lower() not in excluded
     ]
 
 
@@ -33,8 +38,9 @@ class SnapshotSummary:
 
 def prepare_snapshot_data(
     rows: Sequence[Mapping[str, Any]],
+    exclude_categories: frozenset[str] | None = None,
 ) -> SnapshotSummary:
-    rows = _hygienize(list(rows))
+    rows = _hygienize(list(rows), exclude_categories)
     snapshots = pd.DataFrame([dict(row) for row in rows])
     if snapshots.empty:
         return SnapshotSummary(
