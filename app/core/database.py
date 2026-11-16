@@ -120,7 +120,6 @@ def get_connection():
     return cls()
 
 
-
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS items (
     id              TEXT PRIMARY KEY,
@@ -174,10 +173,6 @@ CREATE TABLE IF NOT EXISTS snapshots (
 
 CREATE INDEX IF NOT EXISTS idx_snapshots_date ON snapshots(snapshot_date);
 CREATE INDEX IF NOT EXISTS idx_snapshots_inst  ON snapshots(institution);
-
-CREATE VIEW IF NOT EXISTS v_evolucao AS
-SELECT snapshot_date, SUM(amount) AS patrimonio_total
-FROM snapshots GROUP BY snapshot_date;
 
 CREATE VIEW IF NOT EXISTS v_alocacao_instituicao AS
 SELECT snapshot_date, institution, SUM(amount) AS total
@@ -242,10 +237,6 @@ CREATE TABLE IF NOT EXISTS snapshots (
 
 CREATE INDEX IF NOT EXISTS idx_snapshots_date ON snapshots(snapshot_date);
 CREATE INDEX IF NOT EXISTS idx_snapshots_inst  ON snapshots(institution);
-
-CREATE OR REPLACE VIEW v_evolucao AS
-SELECT snapshot_date, SUM(amount) AS patrimonio_total
-FROM snapshots GROUP BY snapshot_date;
 
 CREATE OR REPLACE VIEW v_alocacao_instituicao AS
 SELECT snapshot_date, institution, SUM(amount) AS total

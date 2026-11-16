@@ -2,7 +2,6 @@ import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
 import streamlit as st
-import pandas as pd
 import altair as alt
 
 from app.core.database import get_connection
@@ -15,22 +14,32 @@ with get_connection() as conn:
     rows = conn.execute(
         "SELECT * FROM snapshots ORDER BY snapshot_date"
     ).fetchall()
-    df, patrimonio_atual, evolucao, por_instituicao = prepare_snapshot_data(rows)
+    summary = prepare_snapshot_data(rows)
 
 
-if df.empty:
+if summary.snapshots.empty:
     st.warning("Nenhum snapshot ainda. Rode o sync: python main.py")
     st.stop()
 
 st.title("📊 OpenWealth")
-st.metric("Patrimônio Total", f"R$ {patrimonio_atual:,.2f}")
+returns = summary.returns
+col1, col2, col3 = st.columns(3)
+col1.metric("Patrimônio", f"R$ {summary.total:,.2f}")
+col2.metric(
+    "Rentabilidade 30d",
+    f"{returns['return_30d']:+.2%}" if returns["return_30d"] is not None else "—",
+)
+col3.metric(
+    "Rentabilidade YTD",
+    f"{returns['return_ytd']:+.2%}" if returns["return_ytd"] is not None else "—",
+)
 
-col1, col2 = st.columns(2)
+chart_col1, chart_col2 = st.columns(2)
 
-with col1:
+with chart_col1:
     st.subheader("Evolução Patrimonial")
     evolucao_chart = (
-        alt.Chart(evolucao)
+        alt.Chart(summary.evolution)
         .mark_line(point=True)
         .encode(
             x=alt.X("snapshot_date:T", title="Data"),
@@ -46,21 +55,35 @@ with col1:
         alt="Evolução do patrimônio total por data",
     )
 
-with col2:
-    st.subheader("Por Instituição")
-    instituicao_chart = (
-        alt.Chart(por_instituicao)
-        .mark_bar()
-        .encode(
-            x=alt.X("amount:Q", title="Patrimônio (R$)", axis=alt.Axis(format=",.0f")),
-            y=alt.Y("account_type:N", title=None, sort="-x"),
-            tooltip=[
-                alt.Tooltip("institution:N", title="Instituição"),
-                alt.Tooltip("amount:Q", title="Patrimônio", format=",.2f"),
-            ],
+with chart_col2:
+    st.subheader("Concentração por instituição")
+    institutions_pct = summary.institutions_pct
+    pct_fmt = institutions_pct["pct"].map("{:.1%}".format)
+    st.dataframe(
+        institutions_pct.assign(pct=pct_fmt),
+        hide_index=True,
+        alt="Participação de cada instituição no patrimônio atual",
+    )
+
+    top_col, hhi_col = st.columns(2)
+    if institutions_pct.empty:
+        top_col.metric("Top instituição", "—")
+    else:
+        top_institution = institutions_pct.iloc[0]
+        top_col.metric(
+            "Top instituição",
+            top_institution["institution"],
+            f"{top_institution['pct']:.1%}",
         )
+    hhi_col.metric(
+        "Concentração (HHI)",
+        f"{summary.hhi:.3f}" if summary.hhi is not None else "—",
     )
-    st.altair_chart(
-        instituicao_chart,
-        alt="Patrimônio por instituição na captura mais recente",
-    )
+
+    if not institutions_pct.empty:
+        st.bar_chart(
+            institutions_pct,
+            x="institution",
+            y="pct",
+            alt="Participação percentual do patrimônio por instituição",
+        )

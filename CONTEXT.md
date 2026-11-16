@@ -3,6 +3,10 @@
 Histórico e contexto do desenvolvimento do projeto até o primeiro commit.
 Serve como memória de decisões, problemas encontrados e soluções adotadas.
 
+> Estado: Fase 4 concluída (Docker/Postgres, scheduler diário, endpoints de
+> leitura, views SQL). Próxima: Fase 5 — Analytics.
+> Última atualização: 2026-11-13.
+
 ---
 
 ## 1. Visão do projeto
@@ -23,7 +27,7 @@ open-wealth/
 ├── app/
 │   ├── core/
 │   │   ├── config.py # configurações (env vars, credenciais Pluggy, item_id)
-│   │   ├── database.py # setup do banco (SQLite em data/database.db)
+│   │   ├── database.py # setup do banco (dual: SQLite local / Postgres em Docker)
 │   │   └── scheduler.py # agendador; registra job "sync_weekly"
 │   ├── models/
 │   │   ├── account.py
@@ -45,13 +49,15 @@ open-wealth/
 │       ├── investimentos.py
 │       └── patrimonio.py
 ├── tests/
-│   ├── test_consolidacao.py # 2 testes (sync_all + get_totals, mocks)
-│   ├── test_pluggy.py # 6 testes do PluggyClient
-│   ├── test_rentabilidade.py # 1 teste
-│   └── test_scheduler.py # 1 teste (job "sync_weekly" registrado)
+│   ├── test_consolidacao.py # sync_all + get_totals + regressões de valor
+│   ├── test_pluggy.py # testes do PluggyClient (v2 transactions)
+│   ├── test_rentabilidade.py
+│   ├── test_scheduler.py
+│   └── test_sync_repository.py # integração sync_weekly + SnapshotRepository
 ├── data/
 │   ├── database.db
 │   └── exports/
+├── docker-compose.yml # serviço db (postgres:16-alpine)
 ├── main.py
 ├── conftest.py
 ├── .env # PLUGGY_CLIENT_ID/SECRET + PLUGGY_ITEM_ID
@@ -65,6 +71,11 @@ open-wealth/
 Settings (pydantic-settings, lê .env): pluggy_client_id,
 pluggy_client_secret, pluggy_base_url (default https://api.pluggy.ai)
 e pluggy_item_id (usado no modo Development; ver 4.6).
+
+### `app/core/database.py`
+
+Modo dual via DATABASE_URL: SQLite local ou Postgres (Docker). Dois
+schemas equivalentes (SCHEMA_SQLITE / SCHEMA_PG); PG usa NUMERIC(20,4).
 
 ### `app/services/pluggy_client.py`
 
@@ -91,9 +102,7 @@ e pluggy_item_id (usado no modo Development; ver 4.6).
 - sync_all(client) → itera items, e para cada item cria Position a partir
   de contas (balance) e investimentos (value); instituição vem de
   item["connector"]["name"] com fallback "Desconhecido".
-- Atenção: no modo Development há apenas 1 item fixo (o do .env) —
-  sync_all precisará de ajuste para operar sobre o item único sem depender
-  de get_items() (ver 7. Próximos passos).
+- No modo Development opera sobre o item único do .env (ver 4.7).
 - get_totals(snapshot) → total geral + agregação por instituição.
 
 ## 4. Problemas, desafios e soluções
@@ -245,77 +254,39 @@ total R$ 42.695,23. Em produção, bastará reativar get_items() no cliente.
 - Validar query params: um parâmetro "inofensivo" (pageSize) quebra a v2
   com 400; testar contra a API real cedo, não só contra mocks.
 - Sempre cat no arquivo depois de colar código — colagem desalinhada gerou
-  método inexistente que só estouraria em runtime.
+método inexistente; revisar sempre após colar.
 
-### 4.8. Investimentos com value null e amount divergente (bug silencioso)
+### 4.8. Migração de esquema incremental no SQLite
 
-**Problema:** a primeira execução E2E mostrava CDR e ISUS11 STOCK com
-R0,00enquantoodashboarddaPluggyexibiaR0,00 enquanto o dashboard da Pluggy exibia R0,00enquantoodashboarddaPluggyexibiaR 2.000,00 cada.
-Investigação direta na API revelou que o problema era maior do que
-parecia: 6 de 8 investimentos do sandbox vinham com value: null, e o
-patrimônio real estava subestimado em R$ 19.185,59 desde sempre
-(total real: R63.371,23,na~oR63.371,23, não R63.371,23,na~oR 44.185,64).
+**Problema:** tabela snapshots antiga sem colunas novas (ex.: category).
+INSERT falhava silenciosamente ou com erro de coluna.
 
-**Armadilha adicional:** amount NÃO é fallback seguro para balance.
-No CDR do sandbox: amount=2500 mas balance=2000 (que é o valor exibido
-no dashboard). Usar amount geraria posição inflada.
+**Solução:** SnapshotRepository cria o schema com CREATE TABLE IF NOT
+EXISTS e verifica colunas existentes (PRAGMA table_info / information_schema)
+para migrar incrementalmente (ALTER TABLE ADD COLUMN quando faltar).
 
-**Solução:** consolidacao.py passou a usar SEMPRE balance como valor
-da posição de investimento. Fallback em cascata apenas se balance
-ausente: value → quantity × price → 0.0. Extraído
-_investment_amount() centralizando a regra, com docstring explicando
-o porquê.
+**Lição:** schema autoconstruído no construtor do repositório evita a classe
+de bugs "funciona no teste, quebra no banco real".
 
-**Lição:** não confiar em nenhum campo único da API como
-"sempre preenchido" — validar contra o dashboard oficial cedo.
-Campos com mesmo nome têm semântica diferente por type de
-investimento.
+### 4.9. Dedup diária do repositório
 
-### 4.9. Instituição null em investimentos
+**Problema:** rodar o sync duas vezes no mesmo dia duplicava snapshots,
+inflando o histórico e distorcendo a série temporal.
 
-**Problema:** ISUS11 STOCK vem com institution: null (o CDR traz
-"Discussão BTG PACTUAL S/A").
+**Solução:** dedup por snapshot_date no repositório: snapshot existente é
+pulado sem nova chamada à API (evento snapshot_skipped no log). Testado
+contra SQLite real (tmp_path), não apenas mock.
 
-**Solução:** fallback para o nome do item quando institution ausente.
+**Lição:** garantias de idempotência devem viver na camada de persistência,
+não no chamador — assim endpoint, scheduler e testes herdam a garantia.
 
-### 4.10. Regressão de posições de investimento (2025-XX-XX)
+### 4.10. Resposta 202 sem distinção synced/skipped
 
-#### Problema
+**Problema:** POST /api/v1/sync responde 202 tanto quando gravou quanto
+quando pulou; impossível distinguir pelo cliente.
 
-API de investments da Pluggy retorna campos inconsistentes por produto:
-
-- `value: null` com `balance` preenchido (ETF ISUS11)
-- `amount` divergente de `balance` (CDB: amount=2500, balance=2000 — dashboard exibe 2000)
-
-#### Decisão de contrato
-
-Fonte de verdade do valor da posição é `balance`, nesta cascata:
-`balance` → `value` → `0.0`
-`amount` NUNCA é usado (pode divergir do que o banco exibe).
-
-#### Verificação
-
-- `sync_all` já cumpria o contrato; bug não se materializou no nosso código.
-- Adicionados 4 testes de regressão em `tests/test_consolidacao.py`
-  (`TestValorPosicaoInvestimento`) para travar a cascata e a agregação
-  pós-cascata. Suite: 17 passed.
-- Se alguém reordenar a cascata, o CI acusa.
-
-#### Campos do modelo `Position` (dataclass, não pydantic)
-
-`institution, account_type, asset_name, category, amount, updated_at`
-⚠️ Nome do ativo é `asset_name`, não `name`.
-
-#### Lições aplicadas/reforçadas
-
-- 4.6: `cat` após colar pegou bloco que não tinha sido salvo na 1ª tentativa ✅
-- 4.7: introspecção (`__dataclass_fields__`) revelou o campo real em vez de adivinhar ✅
-- Testes escritos ANTES de verificar o código: como passaram de primeira,
-  confirmamos o contrato em vez de "corrigir" às cegas.
-
-#### Próximo passo
-
-Fase 2: [descrever aqui]
+**Solução planejada (Fase 3→4):** corpo da resposta com
+{"status": "synced"|"skipped", ...}.
 
 ## 5. Estado dos testes
 
@@ -466,32 +437,69 @@ segurar conexões — preferir reiniciar o server após rm.
   resíduo do banco antigo antes do reset — resolvido, mas reforça: sempre
   validar soma de snapshots contra posições após reset do banco.
 
-### 9.5. Verificação ponta a ponta (sandbox, 2025-11-13)
+### 9.5 Sync atômico (Fase 4)
 
-POST /api/v1/sync → 202, snapshot_saved (2 contas, 8 investimentos)
+O loop de inserts do repositório roda dentro de uma transação única;
+falha em qualquer posição faz rollback do snapshot inteiro — nunca fica
+parcialmente escrito.
 
-POST /api/v1/sync → 202, snapshot_skipped (idempotente)
+### 9.6 Scheduler sobre o item configurado (Fase 4)
 
-sqlite3: snapshots = Conta Corrente 43701.43 (banco) |
-Mastercard Black -1006.20 (cartao) → total 32695.23 ✅
+O job diário reutiliza PLUGGY_ITEM_ID em vez de get_items() (que retorna
+401 no modo Development). Mesma decisão da Fase 2 (4.7), agora aplicada
+ao agendamento.
 
-#### Lições da Fase 2
+### 9.7 Views como contrato de agregação (Fase 4)
 
-- Idempotência por data no repositório é mais simples e robusta do que
-  dedup na camada de serviço.
-- Criar schema no __init__ do repositório elimina a classe de bugs
-  "tabela não existe" em banco novo — mas exige mocks de teste cientes disso.
-- Distinguir synced/skipped no corpo da resposta desde o início evita
-  retrabalho em quem consome a API (dashboards, scheduler).
+Agregações (classe, instituição) vivem em views SQL, não em Python.
+Mudança de regra de agrupamento = mudança no SQL, sem tocar código.
 
-E na seção 7. Próximos passos, sugiro atualizar as linhas resolvidas:
+### 9.8 Dual backend de banco (Fase 4)
 
-- ~~Integrar run_scheduled_sync ao snapshot_repository~~ ✅ Fase 2
-- ~~Testes de regressão do bug de valor~~ ✅ (17 passed)
+DATABASE_URL decide SQLite vs Postgres; schemas equivalentes
+(SCHEMA_SQLITE / SCHEMA_PG). NUMERIC(20,4) no PG retorna Decimal —
+código de comparação não pode assumir float.
 
-E adicionar como próximos passos da Fase 3:
+### 9.9 Docker como limite de recriação (Fase 4)
 
-- Rollback/transação no sync (9.4).
-- Testes do sync_weekly + SnapshotRepository com tmp_path/:memory:.
-- Retorno do endpoint distinguindo synced vs skipped.
-- Scheduler chamando o sync diariamente (cron ou APScheduler).
+Recriar o banco em Docker exige docker compose down -v (destruir o
+volume); equivale ao "apagar database.db + reiniciar servidor" do SQLite.
+
+## 10. Registro da Fase 4
+
+### 10.1 Dockerização — SQLite → Postgres
+
+- docker-compose.yml com serviço db (postgres:16-alpine, porta host 5433,
+  healthcheck, volume persistente). Container: open-wealth-db.
+- app/core/database.py em modo dual (ver 9.8). Efeito colateral corrigido:
+  comparações com == 0.0 quebravam silenciosamente com Decimal.
+- Lição: docker compose down -v para destruir o volume ao recriar o banco.
+
+### 10.2 Scheduler diário
+
+- Segundas-feiras 06:00, America/Sao_Paulo, reutilizando PLUGGY_ITEM_ID.
+- Dedup diária no repositório: reinício do container não infla o histórico.
+- Efeito estratégico: a coleta automática constrói a série temporal que
+  alimenta os indicadores da Fase 5.
+
+### 10.3 Views SQL
+
+- v_alocacao_classe e v_alocacao_instituicao: agregação (% por category /
+  institution), agrupada por snapshot_date. Endpoint faz apenas
+  SELECT * FROM view — a view é o contrato.
+
+### 10.4 API de leitura
+
+- 10 endpoints em app/api/routes.py, incluindo:
+  - GET /carteira → snapshot_date + total (patrimônio consolidado).
+  - GET /carteira/alocacao → alocação por classe (view).
+  - GET /carteira/instituicoes → alocação por instituição (view).
+  - GET /historico/evolucao → série temporal do patrimônio.
+
+### 10.5 Validação ponta a ponta (dados reais)
+
+- Sync Pluggy → Postgres consolidado em R$ 42.695,23 no snapshot de
+  2026-11-13, consistente entre tabela snapshots, views e API.
+- Verificação: docker exec -it open-wealth-db psql -U openwealth -d
+  openwealth -c "SELECT snapshot_date, COUNT(*), SUM(amount) FROM
+  snapshots GROUP BY snapshot_date ORDER BY snapshot_date;"

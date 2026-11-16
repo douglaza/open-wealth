@@ -1,26 +1,27 @@
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent.parent))
+
 import streamlit as st
 from app.core.database import get_connection
+from dashboard.data import prepare_snapshot_data
 
 
 def render():
     st.header("💰 Patrimônio Consolidado")
-    conn = get_connection()
 
-    total = conn.execute(
-        "SELECT SUM(amount) FROM snapshots WHERE snapshot_date = "
-        "(SELECT MAX(snapshot_date) FROM snapshots)"
-    ).fetchone()["total"] or 0
-    st.metric("Patrimônio Total", f"R$ {total:,.2f}")
+    with get_connection() as conn:
+        rows = conn.execute("SELECT * FROM snapshots ORDER BY snapshot_date").fetchall()
+    summary = prepare_snapshot_data(rows)
 
-    por_inst = conn.execute("""
-        SELECT institution, SUM(amount) AS total FROM snapshots
-        WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM snapshots)
-        GROUP BY institution ORDER BY total DESC
-    """).fetchall()
+    if summary.snapshots.empty:
+        st.warning("Nenhum snapshot ainda. Rode o sync: python main.py")
+        st.stop()
+
+    st.metric("Patrimônio Total", f"R$ {summary.total:,.2f}")
 
     st.subheader("Por Instituição")
-    if por_inst:
-        st.bar_chart({r["institution"]: r["total"] for r in por_inst})
-        st.dataframe([dict(r) for r in por_inst], use_container_width=True)
-    else:
-        st.info("Nenhum snapshot ainda. Execute um sync para popular os dados.")
+    st.bar_chart(summary.institutions_pct, x="institution", y="amount",
+                 width="stretch")
+    st.dataframe(summary.institutions, hide_index=True, width="stretch")
+
+render()

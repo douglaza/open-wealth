@@ -71,24 +71,6 @@ class FakeRepo:
     def commit(self):
         self.calls.append(("commit",))
 
-    def ultimos_totais_por_data(self, n):
-        return [
-            {"snapshot_date": "2025-01-01", "total": 100.0},
-            {"snapshot_date": "2025-01-02", "total": 110.0},
-        ]
-
-    def totais_por_instituicao_ultimas_datas(self):
-        return [
-            {
-                "data_atual": "2025-01-02",
-                "data_anterior": "2025-01-01",
-                "institution": "Nubank",
-                "valor_anterior": 100.0,
-                "valor_atual": 110.0,
-            }
-        ]
-
-
 @pytest.fixture
 def client():
     repo = FakeRepo()
@@ -131,40 +113,6 @@ def test_sync_erro_ao_criar_cliente_pluggy(mocker):
         "detail": "Falha ao consultar o Pluggy",
         "error": "boom",
     }
-
-
-def test_rentabilidade_total(client):
-    tc, _ = client
-    resp = tc.get("/api/v1/rentabilidade/total")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["variacao_abs"] == 10.0
-    assert body["variacao_pct"] == 10.0
-
-
-def test_rentabilidade_instituicoes(client):
-    tc, _ = client
-    resp = tc.get("/api/v1/rentabilidade/instituicoes")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body[0]["institution"] == "Nubank"
-    assert body[0]["variacao_abs"] == 10.0
-
-
-def test_rentabilidade_sem_dados(client):
-    tc, _ = client
-    tc.app.dependency_overrides[get_repo] = lambda: FakeRepoVazio()
-    resp = tc.get("/api/v1/rentabilidade/total")
-    assert resp.status_code == 200
-    assert "msg" in resp.json()
-
-
-class FakeRepoVazio(FakeRepo):
-    def ultimos_totais_por_data(self, n):
-        return []
-
-    def totais_por_instituicao_ultimas_datas(self):
-        return []
 
 
 def test_carteira_retorna_total(client):

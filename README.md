@@ -1,9 +1,8 @@
-
 # Open Wealth
 
 MVP em Python para consolidar patrimônio pessoal a partir dos dados da Pluggy.
-O projeto contém um cliente para a API Pluggy, lógica de consolidação em
-snapshots, persistência SQLite, API FastAPI e visualizações Streamlit.
+O projeto inclui um cliente para a API Pluggy, lógica de consolidação em
+snapshots, persistência em SQLite, API FastAPI e visualizações em Streamlit.
 
 > **Estado do MVP:** os componentes principais e suas regras de negócio têm
 > testes automatizados, e o ciclo de sincronização ponta a ponta já persiste
@@ -11,12 +10,7 @@ snapshots, persistência SQLite, API FastAPI e visualizações Streamlit.
 
 ## Tutorial
 
-- [Tutorial da Fase 1](tutorial/ow1_mvp.html) — arquitetura, fluxo de
-  consolidação, regra de valoração de investimentos, repositório de snapshots
-  e testes de regressão.
-- [Tutorial da Fase 2](tutorial/ow2_fase2.html) — API de sincronização,
-  persistência com schema autoconstruído, idempotência diária e log
-  estruturado.
+- [Tutorial será disponibilizado ao final do projeto].
 
 ## Funcionalidades implementadas
 
@@ -68,7 +62,7 @@ Pluggy API → PluggyClient → sync_all → Snapshot
 ```
 
 O endpoint não contém regra de negócio: monta as dependências
-(PluggyClient, SnapshotRepository) e delega ao sync_weekly. A dedup
+(`PluggyClient`, `SnapshotRepository`) e delega ao `sync_weekly`. A dedup
 diária vive no repositório, então qualquer chamador (endpoint, scheduler,
 teste) herda a garantia.
 
@@ -76,25 +70,27 @@ O cliente e a consolidação trabalham com um item por vez, usando
 `PLUGGY_ITEM_ID` no modo Development da Pluggy. A listagem de itens está
 desabilitada porque não está disponível nesse modo.
 
-## Estrutura do projeto
+### Estrutura do projeto
 
 ```text
 app/
 ├── core/          # configurações, banco de dados e scheduler
 ├── models/        # modelos de conta, investimento e snapshot
 ├── repositories/  # persistência e consultas
-└── services/      # Pluggy, consolidação, rentabilidade e sincronização
-dashboard/         # aplicação Streamlit e páginas
-data/              # banco SQLite e exports
-tests/             # testes unitários e de persistência
-tutorial/          # tutoriais visuais das Fases 1 e 2
-main.py            # aplicação FastAPI
+├── services/      # Pluggy, consolidação, rentabilidade e sincronização
+├── api/           # rotas e endpoints FastAPI
+├── cli.py         # interfaces de linha de comando
+└── __init__.py
+
+dashboard/        # aplicação Streamlit e páginas
+data/             # banco SQLite e exports
+tests/            # testes unitários e de persistência
+main.py           # aplicação FastAPI
 ```
 
 ## Requisitos
 
-- Python 3.12 ou compatível com as dependências listadas em
-  [requirements.txt](requirements.txt).
+- Python 3.12 ou compatível com as dependências listadas em `requirements.txt`.
 - Credenciais da Pluggy para consultar dados reais.
 - Um item sandbox conectado e seu ID para o modo Development.
 
@@ -136,10 +132,10 @@ PostgreSQL do Compose em execução, crie essa base uma vez:
 ```bash
 docker compose up -d db
 docker compose exec db createdb -U openwealth openwealth_test
+```
 
-TEST_DB=postgres \
-TEST_DATABASE_URL=postgresql://usuario:senha@localhost:5433/openwealth_test \
-pytest -q
+```bash
+TEST_DB=postgres TEST_DATABASE_URL=postgresql://openwealth:openwealth@localhost:5433/openwealth_test pytest -q
 ```
 
 As chamadas HTTP à Pluggy são simuladas.
@@ -164,9 +160,8 @@ Disparo manual do sync:
 curl -X POST http://localhost:8000/api/v1/sync
 ```
 
-Na primeira chamada do dia, o log mostra
-`sync_started → sync_data_fetched → snapshot_saved`. Nas seguintes,
-`snapshot_skipped` confirma a idempotência.
+Na primeira chamada do dia, o log mostra `sync_started → sync_data_fetched →
+snapshot_saved`. Nas seguintes, `snapshot_skipped` confirma a idempotência.
 
 Verificação direta do banco:
 
@@ -174,8 +169,8 @@ Verificação direta do banco:
 sqlite3 data/database.db "SELECT asset_name, category, amount FROM snapshots;"
 ```
 
-⚠️ Se remover `data/database.db` manualmente, reinicie o servidor: o
-`--reload` do uvicorn pode manter conexões abertas com o arquivo antigo.
+> ⚠️ Se remover `data/database.db` manualmente, reinicie o servidor: o
+> `--reload` do uvicorn pode manter conexões abertas com o arquivo antigo.
 
 ### Dashboard
 
@@ -187,40 +182,53 @@ O dashboard lê a tabela `snapshots`; portanto, precisa de um banco
 inicializado e de snapshots persistidos para exibir dados. Rode o sync
 (`POST /api/v1/sync`) ao menos uma vez antes de abrir.
 
+## Roadmap — Fase 3
+
+Prioridades planejadas para o próximo ciclo:
+
+- Transação atômica no sync: envolver o loop de inserts do repositório com
+  `try/except` + `rollback()` (ver `CONTEXT.md §9.4`).
+- Testes de integração do sync: `sync_weekly + SnapshotRepository` contra SQLite
+  em `tmp_path`/`:memory:`, cobrindo falha parcial no meio do loop de inserts.
+- Retorno do endpoint distinguindo `synced` vs `skipped`: hoje ambos respondem
+  `202`; o corpo passará a conter `{"status": "synced"|"skipped", ...}`.
+- Scheduler ligado ao sync: job diário (cron ou APScheduler) chamando
+  `sync_weekly` com o repositório, eliminando o disparo puramente manual.
+- Endpoints de leitura (`GET /api/v1/snapshots`) e rotas de rentabilidade/evolução.
+
 ## Limitações conhecidas
 
-- O scheduler semanal ainda não está ligado ao fluxo de
-  `sync_weekly`/`SnapshotRepository`; hoje o sync é disparado manualmente via
-  `POST /api/v1/sync`. O job precisa ser adaptado para reutilizar o item
-  configurado em `PLUGGY_ITEM_ID`.
+- O scheduler semanal ainda não está ligado ao fluxo de `sync_weekly`/
+  `SnapshotRepository`; hoje o sync é disparado manualmente via `POST /api/v1/sync`.
+  O job precisa ser adaptado para reutilizar o item configurado em
+  `PLUGGY_ITEM_ID`.
 - A listagem de itens (`get_items()`) retorna 401 no modo Development da
   Pluggy; o fluxo usa o item único configurado por variável de ambiente.
 - As credenciais da Pluggy ainda são montadas dentro do endpoint; a migração
   para variáveis de ambiente injetadas está pendente.
 - Não há endpoints de leitura (`GET /api/v1/snapshots`) nem rotas de
   rentabilidade/evolução — previstos para a Fase 3.
-- Não há retry com backoff nas chamadas à Pluggy nem tratamento de
-  timeout explícito.
+- O sync não é executado em transação atômica: falha no meio do loop de
+  inserts pode deixar o banco parcialmente escrito (sem rollback garantido).
+- O endpoint responde `202` tanto para `synced` quanto para `skipped`; a
+  distinção no corpo da resposta ainda não foi implementada.
+- Não há retry com backoff nas chamadas à Pluggy nem tratamento de timeout
+  explícito.
 - O suporte atual é orientado a um item Pluggy; múltiplos itens e a integração
   completa do dashboard ainda são evoluções futuras.
 
 ## Tecnologias
 
-Python · Pluggy API · SQLite · FastAPI · Streamlit · Pandas · APScheduler ·
-pytest
+Python · Pluggy API · SQLite · FastAPI · Streamlit · Pandas · APScheduler · pytest
 
-**Principais mudanças em relação à versão anterior:**
+## Changelog desta versão
 
-1. **Estado do MVP** — deixou de dizer que a execução ponta a ponta "não está
-   concluída"; agora o sync persiste de verdade.
-2. **Novas funcionalidades** — schema autoconstruído, idempotência diária,
-   `POST /api/v1/sync` (202) e log estruturado.
-3. **Arquitetura** — o diagrama agora mostra o fluxo a partir do endpoint.
-4. **Seção API** — substitui o aviso "a API ainda não inicia" pelas rotas
-   funcionais e pelo exemplo de `curl`.
-5. **Limitações** — removidas as três limitações resolvidas (sync órfão,
-   `get_all` inexistente, item não persistido) e adicionadas as pendências reais
-   da Fase 3 (endpoints de leitura, credenciais em env, retry, scheduler ligado).
-
-> Ajuste o caminho do tutorial da Fase 2 (`tutorial/ow2_fase2.html`) se o nome
-> do arquivo for outro.
+- Roadmap — Fase 3 — nova seção com as prioridades extraídas do `CONTEXT.md`
+  (transação atômica, testes de integração, `synced` vs `skipped`, scheduler diário).
+- Limitações — adicionadas as duas pendências conhecidas da Fase 2: sync sem
+  transação atômica e resposta `202` sem distinção `synced`/`skipped`.
+- Dashboard — as páginas de patrimônio e evolução usam
+  `dashboard.data.prepare_snapshot_data`, sem depender da view `v_evolucao`
+  nem dos serviços legados de rentabilidade.
+- Estado do MVP — inalterado em relação à versão anterior: o sync ponta a ponta
+  persiste snapshots reais com idempotência diária.
