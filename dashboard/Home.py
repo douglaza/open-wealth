@@ -3,11 +3,13 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
+import requests
 import altair as alt
 import streamlit as st
 
 from app.core.database import get_connection
 from dashboard.data import prepare_snapshot_data
+from dashboard.privacy import render_privacy_toggle
 
 st.set_page_config(page_title="OpenWealth", page_icon="📊", layout="wide")
 
@@ -85,3 +87,20 @@ with chart_col2:
             y="pct",
             width="stretch",
         )
+
+# Botão de sincronização manual na barra lateral
+st.sidebar.markdown("---")
+st.sidebar.subheader("Ações")
+if st.sidebar.button("🔄 Sincronizar Agora", use_container_width=True):
+    with st.sidebar.status("Sincronizando com a Pluggy..."):
+        try:
+            resp = requests.post("http://localhost:8000/api/v1/sync", timeout=30)
+            if resp.status_code in (200, 202):
+                st.sidebar.success("Carteira atualizada!")
+                st.rerun()
+            else:
+                st.sidebar.error(f"Erro {resp.status_code}")
+        except Exception as e:
+            st.sidebar.error(f"Falha ao conectar na API: {e}")
+
+render_privacy_toggle()

@@ -17,6 +17,8 @@ snapshots, persistência em SQLite, API FastAPI e visualizações em Streamlit.
 - Cliente Pluggy com autenticação, consultas de item, contas e investimentos.
 - Consulta de transações pela API v2 da Pluggy, com paginação por cursor.
 - Consolidação do item configurado em um `Snapshot` diário.
+- Acompanhamento dos saldos de contas e investimentos conectados pela Pluggy,
+  consolidados por instituição nos snapshots diários.
 - Cálculo de totais gerais e por instituição.
 - Persistência de snapshots no SQLite, com schema autoconstruído na
   instanciação do repositório (`CREATE TABLE IF NOT EXISTS` + migração
@@ -34,7 +36,10 @@ snapshots, persistência em SQLite, API FastAPI e visualizações em Streamlit.
   `3000`, definidos no `docker-compose.yml`, com volumes persistentes para
   séries temporais e dados do Grafana.
 - Dashboard Streamlit para visualizar snapshots, patrimônio, investimentos e
-  evolução.
+  evolução, com modo de privacidade compartilhado entre as páginas.
+- O modo de privacidade desfoca valores de métricas e tabelas enquanto estiver
+  ativado; passar o cursor sobre esses elementos revela os valores. Ele não
+  altera os dados armazenados nem oculta os valores dos gráficos.
 - Scheduler configurado para executar às segundas-feiras às 06:00, no fuso
   `America/Sao_Paulo`.
 - 176 testes automatizados e 100% de cobertura da aplicação (`app/`).
@@ -264,3 +269,5 @@ Python · Pluggy API · SQLite · FastAPI · Streamlit · Pandas · APScheduler 
   nem dos serviços legados de rentabilidade.
 - Estado do MVP — inalterado em relação à versão anterior: o sync ponta a ponta
   persiste snapshots reais com idempotência diária.
+- Dashboard — documentado o acompanhamento de contas e investimentos por
+  instituição e o modo de privacidade compartilhado entre as páginas.

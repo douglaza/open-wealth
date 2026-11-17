@@ -1,6 +1,7 @@
 import streamlit as st
 
 from app.core.database import get_connection
+from dashboard.privacy import render_privacy_toggle
 
 
 def render():
@@ -28,5 +29,7 @@ def render():
     st.bar_chart(por_tipo, width="stretch")
 
     st.dataframe([dict(r) for r in investments], hide_index=True, width="stretch")
+
+    render_privacy_toggle()
 
 render()

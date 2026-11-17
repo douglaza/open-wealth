@@ -7,6 +7,7 @@ import streamlit as st
 
 from app.core.database import get_connection
 from dashboard.data import prepare_snapshot_data
+from dashboard.privacy import render_privacy_toggle
 
 
 def render():
@@ -42,5 +43,7 @@ def render():
 
     st.subheader("Variação por Instituição")
     st.dataframe(summary.institutions_pct, hide_index=True, width="stretch")
+
+    render_privacy_toggle()
 
 render()
