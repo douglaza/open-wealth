@@ -5,7 +5,11 @@ from app.core.config import Settings
 from app.core.exceptions import PluggyError
 from app.integrations.pluggy_client import PluggyClient
 from app.repositories.snapshot_repository import SnapshotRepository
-from app.services.sync import sync_weekly
+from app.services.sync import (
+    _get_configured_item_ids,
+    _infer_institution,
+    sync_weekly,
+)
 
 
 class FakeClient:
@@ -37,7 +41,7 @@ class FakeClient:
         self._accounts = accounts or self.DEFAULT_ACCOUNTS
         self._investments = investments or self.DEFAULT_INVESTMENTS
 
-    def get_item(self):
+    def get_item(self, target_id=None):
         return self._item
 
     def get_accounts(self, item_id):
@@ -71,12 +75,12 @@ class FakeRepo:
 
 
 class ExplodingClient(FakeClient):
-    def get_item(self):
+    def get_item(self, target_id=None):
         raise RuntimeError("API fora do ar")
 
 
 class PluggyErrorClient(FakeClient):
-    def get_item(self):
+    def get_item(self, target_id=None):
         raise PluggyError("API fora")
 
 
@@ -251,22 +255,131 @@ def test_get_network_error_vira_pluggy_error(mocker, exc):
         client._get("/items/x")
 
 
-# def test_snapshot_includes_investments(monkeypatch, fake_repo, fake_client):
-#     # client retorna 1 conta + 1 investimento; repo falso captura save_snapshot_row
-#     sync_weekly(client=fake_client, repo=fake_repo)
-#     rows = fake_repo.snapshot_rows
-#     cats = {r.category for r in rows}
-#     assert "SECURITY" in cats  # falha ruidosamente se investimentos sumirem
+# --- Cobertura de múltiplos itens e inferência de instituição ---
 
 
-# def test_snapshot_includes_investments(fake_client, fake_repo):
-#     sync_weekly(client=fake_client, repo=fake_repo)
-#     rows = fake_repo.snapshot_rows
-#     cats = {r.category for r in rows}
-#     assert "SECURITY" in cats, "investimentos sumiram do snapshot"
-#     inv_row = next(r for r in rows if r.category == "SECURITY")
-#     assert inv_row.acc_type == "investment"
-#     assert inv_row.amount == 11720.42   # balance, não value/cotas
+def test_get_configured_item_ids_com_pluggy_item_ids(monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "pluggy_item_ids", "id-1, id-2")
+    assert _get_configured_item_ids() == ["id-1", "id-2"]
+
+
+def test_get_configured_item_ids_com_env_item_ids(monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "pluggy_item_ids", None)
+    monkeypatch.setenv("PLUGGY_ITEM_IDS", "id-a, id-b ")
+    assert _get_configured_item_ids() == ["id-a", "id-b"]
+
+
+def test_get_configured_item_ids_com_pluggy_item_id_singular(monkeypatch):
+    mock_settings = type("MockSettings", (), {"pluggy_item_id": "id-single"})()
+    monkeypatch.setattr("app.services.sync.settings", mock_settings)
+    monkeypatch.delenv("PLUGGY_ITEM_IDS", raising=False)
+    assert _get_configured_item_ids() == ["id-single"]
+
+
+def test_get_configured_item_ids_com_env_item_id_singular(monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "pluggy_item_ids", None)
+    monkeypatch.delenv("PLUGGY_ITEM_IDS", raising=False)
+    monkeypatch.setenv("PLUGGY_ITEM_ID", "id-env-single")
+    assert _get_configured_item_ids() == ["id-env-single"]
+
+
+def test_get_configured_item_ids_vazio(monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "pluggy_item_ids", None)
+    monkeypatch.delenv("PLUGGY_ITEM_IDS", raising=False)
+    monkeypatch.delenv("PLUGGY_ITEM_ID", raising=False)
+    assert _get_configured_item_ids() == []
+
+
+def test_sync_com_client_pluggy_instance(monkeypatch, mocker):
+    mocker.patch.object(
+        PluggyClient, "get_item", return_value={"id": "id-1", "connector": {"name": "Banco Teste"}}
+    )
+    mocker.patch.object(PluggyClient, "get_accounts", return_value=[])
+    mocker.patch.object(PluggyClient, "get_investments", return_value=[])
+    repo = FakeRepo()
+    monkeypatch.setattr("app.services.sync._get_configured_item_ids", lambda: ["id-1"])
+    sync_weekly(client=PluggyClient(), repo=repo)
+    assert ("commit",) in repo.calls
+
+
+@pytest.mark.parametrize(
+    ("acc_name", "expected"),
+    [
+        ("Conta Itau Unibanco", "Itaú"),
+        ("Cartão Personnalite Black", "Itaú"),
+        ("Conta C6 Bank", "C6 Bank"),
+        ("Conta Nubank", "Nubank"),
+        ("Nu Pagamentos", "Nubank"),
+        ("BTG Pactual Digital", "BTG Pactual"),
+        ("Bradesco Prime", "Bradesco"),
+        ("Santander Select", "Santander"),
+        ("Banco Inter", "Banco Inter"),
+        ("XP Investimentos", "XP Investimentos"),
+    ],
+)
+def test_infer_institution_por_contas(acc_name, expected):
+    accs = [{"name": acc_name}]
+    assert _infer_institution(accs) == expected
+
+
+@pytest.mark.parametrize(
+    ("inv_name", "expected"),
+    [
+        ("CDB Itau 100%", "Itaú"),
+        ("CDB Banco C6", "C6 Bank"),
+        ("Fundo BTG Debentures", "BTG Pactual"),
+        ("LCA Bradesco", "Bradesco"),
+        ("CDB Santander", "Santander"),
+    ],
+)
+def test_infer_institution_por_investimentos(inv_name, expected):
+    accs = [{"name": "Conta Desconhecida"}]
+    invs = [{"name": inv_name}]
+    assert _infer_institution(accs, invs) == expected
+
+
+def test_infer_institution_fallback():
+    accs = [{"name": "Conta Genérica"}]
+    invs = [{"name": "Ativo Genérico"}]
+    assert _infer_institution(accs, invs, fallback="FallbackInst") == "FallbackInst"
+    assert _infer_institution([]) == "MeuPluggy"
+
+
+def test_sync_com_item_ids_explicito():
+    client = FakeClient()
+    repo = FakeRepo()
+    sync_weekly(client=client, repo=repo, item_ids=["item-a", "item-b"])
+    assert ("commit",) in repo.calls
+
+
+def test_sync_com_conector_meupluggy_infere_instituicao():
+    item = {"id": "item-pluggy", "connector": {"name": "MeuPluggy"}}
+    accs = [{"id": "a1", "name": "Conta C6 Bank", "type": "CHECKING", "balance": 200.0}]
+    invs = [{"id": "i1", "name": "CDB C6", "type": "FIXED_INCOME", "balance": 300.0}]
+    client = FakeClient(item=item, accounts=accs, investments=invs)
+    repo = FakeRepo()
+    sync_weekly(client=client, repo=repo)
+    rows = [call[1] for call in repo.calls if call[0] == "save_snapshot_row"]
+    assert len(rows) == 2
+    assert all(r[1] == "C6 Bank" for r in rows)
+
+
+def test_sync_com_instituicao_desconhecida():
+    item = {"id": "item-pluggy", "connector": {"name": ""}}
+    accs = [{"id": "a1", "name": "Itau", "type": "CHECKING", "balance": 100.0}]
+    client = FakeClient(item=item, accounts=accs, investments=[])
+    repo = FakeRepo()
+    sync_weekly(client=client, repo=repo)
+    rows = [call[1] for call in repo.calls if call[0] == "save_snapshot_row"]
+    assert rows[0][1] == "Itaú"
 
 
 def test_snapshot_includes_investments():
