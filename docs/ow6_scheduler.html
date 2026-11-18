@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutorial Fase 6 — Automação, Scheduler & Resiliência | Open Wealth</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: "Inter", sans-serif; }
+    code, pre { font-family: "JetBrains Mono", monospace; }
+  </style>
+
+<style id="ow-nav-styles">
+  .ow-nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.65rem 1rem;
+    background: #0b1120;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    margin: 1.25rem 0 2rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+  }
+  .ow-nav-item {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+  }
+  .ow-nav-item:nth-child(2) {
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  .ow-nav-item:last-child {
+    justify-content: flex-end;
+  }
+  .ow-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #38bdf8;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ow-nav-link:hover {
+    color: #7dd3fc;
+    text-decoration: underline;
+  }
+  .ow-nav-link.home {
+    background: #1e293b;
+    color: #f1f5f9;
+    padding: 0.35rem 0.85rem;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    font-weight: 600;
+    font-size: 0.82rem;
+  }
+  .ow-nav-link.home:hover {
+    background: #334155;
+    color: #38bdf8;
+    text-decoration: none;
+    border-color: #475569;
+  }
+  .ow-nav-disabled {
+    color: #475569;
+    font-size: 0.82rem;
+    user-select: none;
+  }
+  .ow-nav-bottom-container {
+    margin: 3.5rem 0 2rem;
+    border-top: 1px solid #1e293b;
+    padding-top: 2rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    box-sizing: border-box;
+  }
+  .ow-nav-bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  .ow-nav-card {
+    background: #0b1120;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+  }
+  .ow-nav-card:hover:not(.ow-nav-card-disabled) {
+    border-color: #38bdf8;
+    background: #0f172a;
+  }
+  .ow-nav-card-link {
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: center;
+  }
+  .ow-nav-card-prev {
+    text-align: left;
+  }
+  .ow-nav-card-next {
+    text-align: right;
+  }
+  .ow-nav-card-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ow-nav-home-btn {
+    background: #1e293b;
+    color: #f1f5f9;
+    border: 1px solid #334155;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  .ow-nav-home-btn:hover {
+    background: #334155;
+    color: #38bdf8;
+    border-color: #475569;
+  }
+  .ow-nav-subtext {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+  .ow-nav-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+  .ow-nav-card-disabled {
+    opacity: 0.45;
+  }
+  @media (max-width: 680px) {
+    .ow-nav-bar {
+      flex-direction: column;
+      gap: 0.5rem;
+      text-align: center;
+    }
+    .ow-nav-item, .ow-nav-item:last-child {
+      justify-content: center;
+      text-align: center;
+    }
+    .ow-nav-bottom-grid {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+    .ow-nav-card-prev, .ow-nav-card-next {
+      text-align: center;
+    }
+  }
+</style>
+
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased selection:bg-purple-500/30 selection:text-purple-200">
+
+  <!-- Header / Hero -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center font-bold text-slate-950 shadow-lg shadow-purple-500/20 text-lg">
+          OW
+        </div>
+        <div>
+          <span class="text-xs uppercase tracking-wider font-semibold text-purple-400">Open Wealth &bull; Documentação Técnica</span>
+          <h1 class="text-lg font-bold text-slate-100 leading-tight">Tutorial Fase 6 — Automação & Sincronização Diária</h1>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 text-xs">
+        <span class="px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">APScheduler</span>
+        <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">09:00 SP Time</span>
+        <span class="px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">FastAPI Lifespan</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-12">
+
+<!-- OW Top Navigation Bar -->
+<nav class="ow-nav-bar" aria-label="Navegação superior">
+  <div class="ow-nav-item"><a href="ow5_analytics.html" class="ow-nav-link" title="Fase 5: Analytics & Gestão de Risco">&larr; Fase 5: Analytics & Risco</a></div>
+  <div class="ow-nav-item"><a href="tutorial_geral.html" class="ow-nav-link home" title="Voltar ao Tutorial Geral">🏠 Visão Geral / Home</a></div>
+  <div class="ow-nav-item"><a href="ow7_qa.html" class="ow-nav-link" title="Fase 7: Qualidade de Software & CI/CD">Fase 7: Qualidade & CI/CD &rarr;</a></div>
+</nav>
+
+
+
+    <!-- Hero Card -->
+    <section class="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/60 to-slate-950 p-8 shadow-2xl relative overflow-hidden">
+      <div class="absolute -right-20 -top-20 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="max-w-3xl space-y-4">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-400/10 text-purple-300 border border-purple-400/20">
+          ⏰ Operação Autônoma e Resiliente
+        </span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+          Sincronização Agendada, Gestão de Lifespan e Logs Estruturados
+        </h2>
+        <p class="text-slate-300 text-base leading-relaxed">
+          Nenhum usuário quer ter que abrir o terminal ou clicar em "Sincronizar" todos os dias para manter seu patrimônio atualizado. A Fase 6 entrega a <strong>Automação Completa</strong> da aplicação: um orquestrador agendado via APScheduler integrado ao ciclo de vida do FastAPI, garantindo execução diária no fuso brasileiro, resiliência contra falhas de rede e auditoria via logs JSON.
+        </p>
+      </div>
+    </section>
+
+    <!-- 1. Por que Automação é Crítica -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 font-bold flex items-center justify-center text-sm border border-purple-500/30">1</div>
+        <h3 class="text-2xl font-bold text-white tracking-tight">O Desafio Operacional da Sincronização Diária</h3>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="p-6 rounded-xl border border-slate-800 bg-slate-900/60 space-y-3">
+          <div class="text-purple-400 font-bold text-sm uppercase tracking-wide">Janela Operacional Ideal (09:00 BRT)</div>
+          <p class="text-slate-400 text-xs leading-relaxed">
+            As instituições financeiras fecham os saldos de D-1 durante a madrugada. Às 09:00 em <code>America/Sao_Paulo</code>, os saldos bancários e posições de renda fixa já foram consolidados pelos custodiantes, tornando esse o momento perfeito para disparar o sync sem pegar dados parciais.
+          </p>
+        </div>
+        <div class="p-6 rounded-xl border border-slate-800 bg-slate-900/60 space-y-3">
+          <div class="text-emerald-400 font-bold text-sm uppercase tracking-wide">Tolerância a Falhas e Logs JSON</div>
+          <p class="text-slate-400 text-xs leading-relaxed">
+            APIs de Open Finance podem apresentar latências ou instabilidades momentâneas. O orquestrador não pode derrubar a aplicação se uma requisição falhar: ele captura exceções, gera logs estruturados com eventos e agenda a próxima tentativa sem interrupção do serviço.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Arquitetura do Scheduler -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 font-bold flex items-center justify-center text-sm border border-purple-500/30">2</div>
+        <h3 class="text-2xl font-bold text-white tracking-tight">Implementação: <code>app/core/scheduler.py</code></h3>
+      </div>
+      <p class="text-slate-300 text-sm leading-relaxed">
+        Utilizamos o <code>AsyncIOScheduler</code> da biblioteca APScheduler, totalmente compatível com o loop assíncrono do FastAPI e Uvicorn:
+      </p>
+
+      <div class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+        <div class="text-xs text-slate-400 mb-2 font-mono flex items-center justify-between">
+          <span>app/core/scheduler.py &bull; Orquestrador Assíncrono com APScheduler</span>
+          <span class="text-purple-400">Python 3.12</span>
+        </div>
+        <pre class="text-xs text-slate-300 overflow-x-auto p-4 bg-slate-950 rounded-lg border border-slate-800 leading-relaxed"><code>from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+from zoneinfo import ZoneInfo
+
+scheduler = AsyncIOScheduler(timezone=ZoneInfo("America/Sao_Paulo"))
+
+async def scheduled_sync_job() -> None:
+    <span class="text-slate-500">"""Job agendado executado diariamente às 09:00."""</span>
+    logger.info("scheduler_job_started", trigger="cron_daily_09h")
+    try:
+        service = get_sync_service()
+        result = await service.execute_sync()
+        logger.info("scheduler_job_finished", result=result)
+    except Exception as exc:
+        logger.error("scheduler_job_failed", error=str(exc))
+
+def start_scheduler() -> None:
+    <span class="text-slate-500"># Execução diária às 09:00 (Segunda a Domingo)</span>
+    trigger = CronTrigger(hour=9, minute=0, timezone=ZoneInfo("America/Sao_Paulo"))
+    scheduler.add_job(
+        scheduled_sync_job,
+        trigger=trigger,
+        id="daily_open_finance_sync",
+        replace_existing=True
+    )
+    scheduler.start()
+    logger.info("scheduler_started", schedule="09:00 America/Sao_Paulo")</code></pre>
+      </div>
+    </section>
+
+    <!-- 3. Integração com o Lifespan do FastAPI -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 font-bold flex items-center justify-center text-sm border border-purple-500/30">3</div>
+        <h3 class="text-2xl font-bold text-white tracking-tight">Gerenciamento de Ciclo de Vida (Lifespan Context)</h3>
+      </div>
+      <p class="text-slate-300 text-sm leading-relaxed">
+        Em vez de eventos legados <code>@app.on_event("startup")</code>, o Open Wealth segue as melhores práticas do FastAPI moderno usando <code>@asynccontextmanager</code> para garantir inicialização e encerramento gracioso (graceful shutdown) de threads e conexões:
+      </p>
+
+      <div class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+        <div class="text-xs text-slate-400 mb-2 font-mono flex items-center justify-between">
+          <span>main.py &bull; Lifespan Assíncrono com Shutdown Seguro</span>
+          <span class="text-purple-400">Python 3.12</span>
+        </div>
+        <pre class="text-xs text-slate-300 overflow-x-auto p-4 bg-slate-950 rounded-lg border border-slate-800 leading-relaxed"><code>@asynccontextmanager
+async def lifespan(app: FastAPI):
+    <span class="text-slate-500"># STARTUP: Inicializa banco, migrações e dispara o scheduler</span>
+    init_db()
+    start_scheduler()
+    yield
+    <span class="text-slate-500"># SHUTDOWN: Encerra jobs pendentes sem corromper transações</span>
+    if scheduler.running:
+        scheduler.shutdown(wait=False)
+        logger.info("scheduler_shutdown_complete")
+
+app = FastAPI(title="Open Wealth API", lifespan=lifespan)</code></pre>
+      </div>
+    </section>
+
+    <!-- 4. Resiliência Operacional e Auditoria -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 font-bold flex items-center justify-center text-sm border border-purple-500/30">4</div>
+        <h3 class="text-2xl font-bold text-white tracking-tight">Logs Estruturados JSON para Auditoria</h3>
+      </div>
+      <p class="text-slate-300 text-sm leading-relaxed">
+        O sistema adota saída de logs padronizada em formato JSON (facilitando ingestão por ferramentas como Datadog, Grafana Loki e CloudWatch):
+      </p>
+      <div class="rounded-xl border border-slate-800 bg-slate-950 p-4 font-mono text-xs text-slate-300 space-y-1">
+        <div>{"event": "sync_started", "timestamp": "2026-11-18T09:00:01Z", "institution": "C6 Bank"}</div>
+        <div>{"event": "sync_data_fetched", "accounts": 2, "investments": 14, "duration_ms": 842}</div>
+        <div>{"event": "snapshot_saved", "snapshot_id": 42, "total": 108200.0, "status": "success"}</div>
+      </div>
+    </section>
+
+    <!-- 5. Operação em Linux / Systemd -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 font-bold flex items-center justify-center text-sm border border-purple-500/30">5</div>
+        <h3 class="text-2xl font-bold text-white tracking-tight">Operação Contínua como Serviço Linux (Systemd)</h3>
+      </div>
+      <p class="text-slate-300 text-sm leading-relaxed">
+        Para manter o backend rodando 24/7 na máquina do desenvolvedor ou servidor Linux, basta configurar o serviço systemd em <code>/etc/systemd/system/open-wealth.service</code>:
+      </p>
+
+      <div class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+        <pre class="text-xs text-purple-300 overflow-x-auto p-4 bg-slate-950 rounded-lg border border-slate-800 font-mono"><code>[Unit]
+Description=Open Wealth FastAPI & Scheduler Service
+After=network.target
+
+[Service]
+Type=simple
+User=douglaza
+WorkingDirectory=/home/douglaza/Documentos/open-wealth
+ExecStart=/home/douglaza/Documentos/open-wealth/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+Environment="PATH=/home/douglaza/Documentos/open-wealth/.venv/bin"
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    
+
+<!-- OW Bottom Navigation Grid -->
+<nav class="ow-nav-bottom-container" aria-label="Navegação inferior">
+  <div class="ow-nav-bottom-grid">
+    <div class="ow-nav-card ow-nav-card-prev">
+      <a href="ow5_analytics.html" class="ow-nav-card-link">
+        <span class="ow-nav-subtext">&larr; Fase Anterior</span>
+        <span class="ow-nav-title">Fase 5: Analytics & Gestão de Risco</span>
+      </a></div>
+    <div class="ow-nav-card-center">
+      <a href="tutorial_geral.html" class="ow-nav-home-btn" title="Voltar à Trilha Completa">
+        🏠 Hub Geral (Fases 1 a 9)
+      </a></div>
+    <div class="ow-nav-card ow-nav-card-next">
+      <a href="ow7_qa.html" class="ow-nav-card-link">
+        <span class="ow-nav-subtext">Próxima Fase &rarr;</span>
+        <span class="ow-nav-title">Fase 7: Qualidade de Software & CI/CD</span>
+      </a></div>
+  </div>
+</nav>
+
+<footer class="pt-8 border-t border-slate-800 text-center text-xs text-slate-500">
+      Open Wealth &bull; Documentação Técnica de Arquitetura &bull; Fase 6 Concluída
+    </footer>
+
+  </main>
+</body>
+</html>

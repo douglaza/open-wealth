@@ -1,5 +1,6 @@
 """Domínio puro: sem imports de HTTP, DB ou framework além do Pydantic."""
 
+from dataclasses import dataclass
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -32,3 +33,14 @@ class Snapshot(BaseModel):
     @property
     def total(self) -> float:
         return sum(p.amount for p in self.positions)
+
+
+@dataclass
+class ManualPosition:
+    name: str
+    type: str  # "ASSET" ou "LIABILITY"
+    institution: str
+    category: str
+    amount: float
+    updated_at: str | None = None
+    id: int | None = None

@@ -7,15 +7,15 @@ scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
 
 
 def start_scheduler():
-    # Toda segunda-feira às 06:00
+    # Todos os dias às 09:00
     scheduler.add_job(
         sync_weekly,
-        CronTrigger(day_of_week="mon", hour=6, minute=0),
-        id="sync_weekly",
+        CronTrigger(hour=9, minute=0),
+        id="sync_daily",
         replace_existing=True,
     )
     scheduler.start()
-    print("⏰ Scheduler iniciado: sync semanal seg 06:00")
+    print("⏰ Scheduler iniciado: sync diário às 09:00")
 
 
 def stop_scheduler():

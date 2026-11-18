@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open Wealth — Tutorial da Fase 7: Qualidade de Software & CI/CD</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card-alt: #162032;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --green: #4ade80;
+    --orange: #fb923c;
+    --red: #f87171;
+    --purple: #c084fc;
+    --border: #334155;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    padding: 2rem 1rem;
+  }
+  main {
+    max-width: 920px;
+    margin: 0 auto;
+  }
+  header {
+    margin-bottom: 2.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+  }
+  h1 {
+    color: var(--accent);
+    font-size: 2.1rem;
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 1.05rem;
+    margin-bottom: 1.2rem;
+  }
+  .tag-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .tag {
+    background: #0b1120;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.8rem;
+    font-family: "Fira Code", monospace;
+  }
+  .tag.green { border-color: var(--green); color: var(--green); }
+  .tag.accent { border-color: var(--accent); color: var(--accent); }
+  .tag.orange { border-color: var(--orange); color: var(--orange); }
+
+  h2 {
+    color: var(--accent);
+    margin: 2.5rem 0 1rem;
+    font-size: 1.45rem;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.4rem;
+  }
+  h3 {
+    color: var(--green);
+    margin: 1.3rem 0 0.5rem;
+    font-size: 1.15rem;
+  }
+  h4 {
+    color: var(--purple);
+    margin: 1rem 0 0.4rem;
+    font-size: 1rem;
+  }
+  p { margin: 0.65rem 0; }
+  b { color: #f1f5f9; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.3rem 1.6rem;
+    margin: 1.2rem 0;
+  }
+  .card.destaque {
+    border-left: 5px solid var(--orange);
+    background: #23190e;
+  }
+  .card.success {
+    border-left: 5px solid var(--green);
+    background: #0d2319;
+  }
+  .card.info {
+    border-left: 5px solid var(--accent);
+    background: #0c2033;
+  }
+
+  code, pre {
+    font-family: "Fira Code", Consolas, "JetBrains Mono", monospace;
+    background: #0b1120;
+    border-radius: 6px;
+  }
+  code {
+    padding: 0.15em 0.45em;
+    font-size: 0.88em;
+    color: var(--orange);
+    border: 1px solid #1e293b;
+  }
+  pre {
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0.8rem 0;
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text);
+  }
+  .c { color: var(--muted); font-style: italic; }
+  .k { color: var(--accent); font-weight: bold; }
+  .s { color: var(--green); }
+  .w { color: var(--orange); }
+  .err { color: var(--red); font-weight: bold; }
+
+  /* Diagramas de fluxo */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: center;
+    margin: 1.5rem 0;
+  }
+  .node {
+    background: #0b1120;
+    border: 2px solid var(--accent);
+    border-radius: 10px;
+    padding: 0.8rem 1.4rem;
+    text-align: center;
+    width: 100%;
+    max-width: 580px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .node.green { border-color: var(--green); }
+  .node.purple { border-color: var(--purple); }
+  .node.orange { border-color: var(--orange); }
+  .node b { color: #f8fafc; font-size: 1.02rem; }
+  .node small { color: var(--muted); display: block; margin-top: 0.2rem; font-size: 0.85rem; }
+  .arrow { color: var(--green); font-size: 1.6rem; padding: 0.25rem 0; font-weight: bold; }
+
+  /* Grid e colunas */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  @media (max-width: 768px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  /* Tabelas */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.92rem;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 0.65rem 0.85rem;
+    text-align: left;
+  }
+  th {
+    background: #0b1120;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  td.num {
+    text-align: right;
+    font-family: monospace;
+  }
+
+  .ok { color: var(--green); font-weight: bold; }
+  .no { color: var(--red); font-weight: bold; }
+  .badge-pill {
+    background: var(--green);
+    color: #0b1120;
+    padding: 0.15rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    display: inline-block;
+  }
+
+  /* Etapas em lista */
+  .step-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin: 1rem 0;
+  }
+  .step-item {
+    display: flex;
+    gap: 1rem;
+    background: #0b1120;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    padding: 0.9rem 1.1rem;
+    border-radius: 8px;
+    align-items: flex-start;
+  }
+  .step-item.green { border-left-color: var(--green); }
+  .step-num {
+    background: var(--accent);
+    color: #0b1120;
+    font-weight: bold;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+  }
+  .step-num.green { background: var(--green); }
+  .step-body { flex: 1; }
+
+  ul, ol { padding-left: 1.4rem; margin: 0.5rem 0; }
+  li { margin: 0.35rem 0; }
+
+  footer {
+    margin-top: 3.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    text-align: center;
+    font-size: 0.85rem;
+  }
+</style>
+
+<style id="ow-nav-styles">
+  .ow-nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.65rem 1rem;
+    background: #0b1120;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    margin: 1.25rem 0 2rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+  }
+  .ow-nav-item {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+  }
+  .ow-nav-item:nth-child(2) {
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  .ow-nav-item:last-child {
+    justify-content: flex-end;
+  }
+  .ow-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #38bdf8;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ow-nav-link:hover {
+    color: #7dd3fc;
+    text-decoration: underline;
+  }
+  .ow-nav-link.home {
+    background: #1e293b;
+    color: #f1f5f9;
+    padding: 0.35rem 0.85rem;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    font-weight: 600;
+    font-size: 0.82rem;
+  }
+  .ow-nav-link.home:hover {
+    background: #334155;
+    color: #38bdf8;
+    text-decoration: none;
+    border-color: #475569;
+  }
+  .ow-nav-disabled {
+    color: #475569;
+    font-size: 0.82rem;
+    user-select: none;
+  }
+  .ow-nav-bottom-container {
+    margin: 3.5rem 0 2rem;
+    border-top: 1px solid #1e293b;
+    padding-top: 2rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    box-sizing: border-box;
+  }
+  .ow-nav-bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  .ow-nav-card {
+    background: #0b1120;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+  }
+  .ow-nav-card:hover:not(.ow-nav-card-disabled) {
+    border-color: #38bdf8;
+    background: #0f172a;
+  }
+  .ow-nav-card-link {
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: center;
+  }
+  .ow-nav-card-prev {
+    text-align: left;
+  }
+  .ow-nav-card-next {
+    text-align: right;
+  }
+  .ow-nav-card-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ow-nav-home-btn {
+    background: #1e293b;
+    color: #f1f5f9;
+    border: 1px solid #334155;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  .ow-nav-home-btn:hover {
+    background: #334155;
+    color: #38bdf8;
+    border-color: #475569;
+  }
+  .ow-nav-subtext {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+  .ow-nav-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+  .ow-nav-card-disabled {
+    opacity: 0.45;
+  }
+  @media (max-width: 680px) {
+    .ow-nav-bar {
+      flex-direction: column;
+      gap: 0.5rem;
+      text-align: center;
+    }
+    .ow-nav-item, .ow-nav-item:last-child {
+      justify-content: center;
+      text-align: center;
+    }
+    .ow-nav-bottom-grid {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+    .ow-nav-card-prev, .ow-nav-card-next {
+      text-align: center;
+    }
+  }
+</style>
+
+</head>
+<body>
+<main>
+
+<!-- OW Top Navigation Bar -->
+<nav class="ow-nav-bar" aria-label="Navegação superior">
+  <div class="ow-nav-item"><a href="ow6_scheduler.html" class="ow-nav-link" title="Fase 6: Automação & Sincronização Diária">&larr; Fase 6: Automação & Scheduler</a></div>
+  <div class="ow-nav-item"><a href="tutorial_geral.html" class="ow-nav-link home" title="Voltar ao Tutorial Geral">🏠 Visão Geral / Home</a></div>
+  <div class="ow-nav-item"><a href="ow8_observabilidade.html" class="ow-nav-link" title="Fase 8: Observabilidade SRE">Fase 8: Observabilidade SRE &rarr;</a></div>
+</nav>
+
+
+
+<header>
+  <h1>🛡️ Open Wealth — Fase 7: Qualidade de Software & CI/CD</h1>
+  <p class="subtitle">
+    Como blindamos o agregador patrimonial com 176 testes, cobertura de 100%,
+    tipagem estrita com Mypy, automação de pre-commit e pipeline verde no GitHub Actions.
+  </p>
+  <div class="tag-bar">
+    <span class="tag green">✔ 176 testes passando</span>
+    <span class="tag green">✔ Coverage 100% (fail_under)</span>
+    <span class="tag accent">✔ Ruff Lint + Format</span>
+    <span class="tag accent">✔ Mypy 28/28 arquivos</span>
+    <span class="tag orange">✔ Git Pre-commit Hook</span>
+    <span class="tag green">✔ GitHub Actions CI Verde (42s)</span>
+  </div>
+</header>
+
+<!-- ============ RESUMO DAS FASES INTERMEDIARIAS ============ -->
+<h2>1. Ponte Contextual: O que foi construído nas Fases 3, 5 e 6</h2>
+<p>
+  Antes de entendermos como garantimos a qualidade do código na Fase 7, vale recapitular a evolução
+  do <b>Open Wealth</b> nas fases intermediárias (3, 5 e 6), que transformaram o script de consolidação
+  em um ecossistema patrimonial completo:
+</p>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>📈 Fase 3: Histórico Patrimonial & PostgreSQL</h3>
+    <p><b>Objetivo:</b> Sair da foto pontual de "hoje" e criar uma linha do tempo confiável do patrimônio.</p>
+    <ul>
+      <li><b>Snapshots diários:</b> Gravação idempotente por instituição e data via <code>SnapshotRepository</code>. Se o sync rodar 10 vezes no mesmo dia, os registros se atualizam sem duplicar.</li>
+      <li><b>Persistência robusta:</b> Suporte dual-mode a SQLite local e PostgreSQL via <code>DATABASE_URL</code>, com schema preparado para séries temporais.</li>
+      <li><b>Séries de evolução:</b> Módulo <code>app/services/historico.py</code> gerando curvas de evolução patrimonial e crescimento acumulado.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>📊 Fase 5: Analytics & Métricas Financeiras</h3>
+    <p><b>Objetivo:</b> Transformar dados brutos em inteligência de alocação e gestão de risco.</p>
+    <ul>
+      <li><b>Rentabilidade temporal:</b> Cálculo de retornos acumulados em janelas de 30 dias e YTD (Year-to-Date).</li>
+      <li><b>Alocação por classes:</b> Consolidação percentual em Renda Fixa, Ações, FIIs e ETFs através de views e <code>app/services/analytics.py</code>.</li>
+      <li><b>Gestão de risco & concentração:</b> Análise de exposição institucional (ex: % em Rico, Inter, Nubank) e diversificação de custódia.</li>
+      <li><b>Dashboard enriquecido:</b> Páginas no Streamlit para visualização analítica (<code>dashboard/pages/</code>).</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card info">
+  <h3>⏰ Fase 6: Automação & Sincronização Diária</h3>
+  <p>
+    <b>Objetivo:</b> Eliminar a necessidade de comandos manuais para alimentar o banco de dados.
+  </p>
+  <ul>
+    <li>
+      <b>Orquestrador agendado:</b> Criação de <code>app/core/scheduler.py</code> utilizando APScheduler integrado ao ciclo de vida da aplicação.
+    </li>
+    <li>
+      <b>Rotina operacional:</b> Configuração do serviço systemd na máquina local/VM, executando a coleta automática sem depender de intervenção do usuário.
+    </li>
+    <li>
+      <b>Alimentação contínua:</b> Cada execução diária alimenta a base com dados reais do Open Finance (Pluggy), criando a matéria-prima para os gráficos da Fase 3 e os indicadores da Fase 5.
+    </li>
+  </ul>
+</div>
+
+<div class="card destaque">
+  ⚠️ <b>Por que a Fase 7 foi crucial?</b><br>
+  Com 28 arquivos de código-fonte em Python, regras financeiras estritas (cascata de valoração,
+  cálculo de rentabilidade, deduplicação no banco) e integrações externas, qualquer pequena alteração
+  poderia quebrar um cálculo silenciosamente. A Fase 7 estabelece as <b>regras do jogo inegociáveis</b>
+  para que nenhum bug passe despercebido.
+</div>
+
+<!-- ============ OS CRITERIOS DA FASE 7 ============ -->
+<h2>2. Critérios de Aceitação da Fase 7</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Critério</th>
+      <th>Ferramenta</th>
+      <th>Exigência / Meta</th>
+      <th>Status Alcançado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>Testes Automatizados</b></td>
+      <td><code>pytest</code></td>
+      <td>Testes unitários e de integração rodando</td>
+      <td><span class="ok">✔ 176 testes passando</span></td>
+    </tr>
+    <tr>
+      <td><b>Cobertura de Código</b></td>
+      <td><code>pytest-cov / coverage</code></td>
+      <td>Cobertura &ge; 80% enforced no CI</td>
+      <td><span class="ok">✔ 100% (fail_under = 100)</span></td>
+    </tr>
+    <tr>
+      <td><b>Linting & Estilo</b></td>
+      <td><code>ruff check & format</code></td>
+      <td>Sem avisos ou erros de linting PEP 8</td>
+      <td><span class="ok">✔ All checks passed</span></td>
+    </tr>
+    <tr>
+      <td><b>Tipagem Estática</b></td>
+      <td><code>mypy</code></td>
+      <td>Type hints validados em todos os módulos</td>
+      <td><span class="ok">✔ 0 erros em 28 arquivos</span></td>
+    </tr>
+    <tr>
+      <td><b>Esteira de CI/CD</b></td>
+      <td><code>GitHub Actions</code></td>
+      <td>Pipeline verde: Lint &rarr; Tests &rarr; Build</td>
+      <td><span class="ok">✔ Job #3 Verde (42s)</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ============ TESTES E COBERTURA ============ -->
+<h2>3. Testes Automatizados e Cobertura 100%</h2>
+<p>
+  O Open Wealth adota a pirâmide de testes para garantir desde a menor função de domínio até as rotas HTTP completas:
+</p>
+
+<div class="card">
+  <h3>Mapa dos Testes (20+ arquivos sob <code>tests/</code>)</h3>
+  <ul>
+    <li><b>Domínio & Regras de Negócio:</b> <code>test_models.py</code>, <code>test_consolidacao.py</code>, <code>test_returns.py</code>, <code>test_allocation.py</code>, <code>test_concentration.py</code> — garantem a cascata <code>balance &rarr; quantity * price &rarr; amount &rarr; 0</code> e cálculos de porcentagens.</li>
+    <li><b>Integrações & Contratos:</b> <code>test_pluggy.py</code> e <code>test_pluggy_contract.py</code> — simulam respostas de APIs externas e garantem que payloads inesperados levantem exceções controladas (ex.: <code>PluggyError</code>).</li>
+    <li><b>Banco de Dados & Repositório:</b> <code>test_snapshot_repository.py</code>, <code>test_database.py</code> — validam persistência real com SQLite em memória e testes de idempotência (mesmo snapshot atualiza sem duplicar).</li>
+    <li><b>API REST & Endpoints:</b> <code>test_routes.py</code>, <code>test_api.py</code>, <code>test_api_historico.py</code> — testam respostas JSON, códigos de status HTTP e validação com FastAPI TestClient.</li>
+    <li><b>Orquestração e CLI:</b> <code>test_scheduler.py</code>, <code>test_cli.py</code>, <code>test_sync.py</code>, <code>test_logging.py</code>.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>Enforcement no <code>pyproject.toml</code></h3>
+  <p>
+    A meta inicial era 80%, mas o projeto configurou uma trava estrita de <b>100%</b>. Se uma linha sequer
+    de código não for executada durante a suíte de testes, o comando falha:
+  </p>
+<pre><code><span class="k">[tool.coverage.run]</span>
+source = [<span class="s">"app"</span>]
+
+<span class="k">[tool.coverage.report]</span>
+fail_under = <span class="s">100</span>
+show_missing = <span class="k">true</span></code></pre>
+  <p>
+    Execução local:
+  </p>
+<pre><code>$ ./.venv/bin/pytest -v
+<span class="c">...</span>
+<span class="s">176 passed in 2.69s</span>
+Required test coverage of 100% reached. Total coverage: 100.00%</code></pre>
+</div>
+
+<!-- ============ LINT E MYPY ============ -->
+<h2>4. Qualidade Estática: Ruff e Mypy</h2>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>⚡ Ruff (Linting + Formatação)</h3>
+    <p>Substitui Flake8, Isort, Black e Pyupgrade com velocidade instantânea em Rust.</p>
+    <ul>
+      <li><b>E, W, F:</b> Erros sintáticos, imports não utilizados e estilo PEP 8.</li>
+      <li><b>I (Isort):</b> Ordenação automática de imports com primeiro pacote <code>app</code>.</li>
+      <li><b>B (Bugbear):</b> Prevenção de bugs sutis (ex: valores default mutáveis).</li>
+      <li><b>SIM (Simplify):</b> Sugestões de simplificação de sintaxe Pythonica.</li>
+      <li><b>Regra B008 ignorada:</b> Permite o padrão idiomático do FastAPI com <code>Depends(...)</code> como valor default de rotas.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>🔍 Mypy (Verificação Estática de Tipos)</h3>
+    <p>Checagem de consistência de tipos em tempo de desenvolvimento, sem precisar rodar o sistema.</p>
+    <ul>
+      <li>Garante que argumentos e retornos obedeçam aos contratos declarados.</li>
+      <li>Elimina erros clássicos de <code>AttributeError</code> e <code>TypeError: NoneType object has no attribute</code> em produção.</li>
+      <li>Obriga clareza sobre quando uma variável pode ser nula (<code>Optional[T]</code> ou <code>T | None</code>).</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card destaque">
+  <h3>🐛 O Bug Real que o Mypy Encontrou no <code>pluggy_client.py</code></h3>
+  <p>
+    Muitas pessoas acham que tipagem estática é só "burocracia". No Open Wealth, o Mypy encontrou
+    um <b>bug lógico crítico</b> no gerenciamento de tokens da Pluggy:
+  </p>
+
+  <p><b>1. Incompatibilidade de tipos numéricos:</b></p>
+<pre><code><span class="c"># Antes (erro no construtor e na expiração):</span>
+self._token_expiry = <span class="err">0</span>  <span class="c"># inferido como int</span>
+self._token_expiry = time.time() + self.TOKEN_LIFETIME  <span class="c"># time.time() retorna float!</span>
+<span class="err"># error: Incompatible types in assignment (expression has type "float", variable has type "int")</span></code></pre>
+
+  <p><b>2. Bug de retorno silencioso de None:</b></p>
+<pre><code><span class="c"># Antes (código que falharia silenciosamente quando o token ainda fosse válido):</span>
+def _get_token(self) -> str:
+    if not self._token or time.time() > self._token_expiry:
+        return self._authenticate()
+    <span class="err"># Se o token AINDA ERA VÁLIDO, a função não tinha return e entregava None!</span>
+<span class="err"># error: Incompatible return value type (got "None", expected "str")</span></code></pre>
+
+  <p><b>A Solução com Tipagem Estrita:</b></p>
+<pre><code><span class="k">class</span> PluggyClient:
+    <span class="k">def</span> __init__(self, ...):
+        self._token: str | None = None
+        self._token_expiry: float = 0.0
+
+    <span class="k">def</span> _get_token(self) -> str:
+        <span class="k">if</span> <span class="k">not</span> self._token <span class="k">or</span> time.time() > self._token_expiry:
+            <span class="k">return</span> self._authenticate()
+        <span class="k">return</span> self._token  <span class="c"># Agora sempre retorna str!</span></code></pre>
+</div>
+
+<!-- ============ PRE-COMMIT ============ -->
+<h2>5. A Primeira Linha de Defesa: Git Pre-commit Hooks</h2>
+<p>
+  Para evitar que código quebrado sequer chegue ao Git, configuramos o <code>pre-commit</code>.
+  Ele roda automaticamente antes de cada <code>git commit</code>.
+</p>
+
+<div class="card">
+  <h3>Arquivo <code>.pre-commit-config.yaml</code></h3>
+<pre><code><span class="k">repos:</span>
+  - <span class="k">repo:</span> https://github.com/astral-sh/ruff-pre-commit
+    <span class="k">rev:</span> v0.4.9
+    <span class="k">hooks:</span>
+      - <span class="k">id:</span> ruff
+        <span class="k">args:</span> [--fix]
+      - <span class="k">id:</span> ruff-format
+  - <span class="k">repo:</span> local
+    <span class="k">hooks:</span>
+      - <span class="k">id:</span> mypy
+        <span class="k">name:</span> mypy
+        <span class="k">entry:</span> ./.venv/bin/mypy app
+        <span class="k">language:</span> script
+        <span class="k">types:</span> [python]
+        <span class="k">pass_filenames:</span> false</code></pre>
+  <p>
+    Ao rodar <code>git commit</code>, se o código estiver desformatado, o hook formata os arquivos.
+    Se o Mypy acusar tipo inválido, o commit é abortado imediatamente!
+  </p>
+</div>
+
+<!-- ============ GITHUB ACTIONS EXPLICADO ============ -->
+<h2>6. Entendendo a Fundo o GitHub Actions (CI/CD)</h2>
+<p>
+  Você sempre subiu código para o repositório, mas como o GitHub Actions funciona por trás dos panos?
+  E por que ele é tão valorizado na engenharia de software?
+</p>
+
+<div class="card info">
+  <h3>💡 O que é CI (Continuous Integration / Integração Contínua)?</h3>
+  <p>
+    É a prática de automatizar a integração e a validação de código de múltiplos desenvolvedores (ou de você mesmo
+    ao longo do tempo). Em vez de esperar para descobrir problemas na hora de colocar o app em produção,
+    o sistema valida cada alteração no instante exato em que ela é enviada ao repositório.
+  </p>
+</div>
+
+<h3>O Ciclo de Vida de um <code>git push</code> com CI</h3>
+<div class="flow">
+  <div class="node">
+    <b>💻 1. Você executa no terminal local:</b>
+    <small>git add . && git commit -m "feat: ..." && git push origin main</small>
+  </div>
+  <div class="arrow">↓</div>
+  <div class="node purple">
+    <b>🔔 2. O GitHub recebe o commit e ativa o Trigger:</b>
+    <small>Identifica a regra configurada em .github/workflows/ci.yml (on: push: branches: [main])</small>
+  </div>
+  <div class="arrow">↓</div>
+  <div class="node orange">
+    <b>☁️ 3. O GitHub provisiona uma Máquina Virtual Limpa:</b>
+    <small>Um servidor Ubuntu 24/22 zerado na nuvem (Runner), sem nenhum arquivo ou pacote prévio</small>
+  </div>
+  <div class="arrow">↓</div>
+  <div class="node">
+    <b>⚙️ 4. Execução sequencial dos passos do Workflow:</b>
+    <small>Checkout do código &rarr; Setup do Python &rarr; Instalação de dependências &rarr; Lint &rarr; Type Check &rarr; Testes</small>
+  </div>
+  <div class="arrow">↓</div>
+  <div class="node green">
+    <b>🟢 5. O Veredito Final:</b>
+    <small>Se todos os passos retornarem exit code 0 &rarr; <b>Badge Verde</b>. Se qualquer passo falhar &rarr; <b>Pipeline Vermelho</b></small>
+  </div>
+</div>
+
+<div class="card destaque">
+  <h3>O Paradoxo do "Na Minha Máquina Funciona!"</h3>
+  <p>
+    No seu computador local, você já possui um ambiente virtual configurado há semanas: pacotes instalados
+    em tempos diferentes, dependências que você instalou manualmente com <code>pip install</code> e esqueceu de anotar,
+    arquivos temporários ignorados no <code>.gitignore</code>, etc.
+  </p>
+  <p>
+    <b>O GitHub Actions é a prova de fogo:</b> Ele roda em um ambiente totalmente estéril.
+    Se o projeto passou no runner do GitHub, significa que <b>qualquer pessoa no mundo ou qualquer servidor de produção
+    conseguirá baixar o código e executá-lo sem problemas</b>.
+  </p>
+</div>
+
+<!-- ============ O CASO REAL DO PIPELINE ============ -->
+<h2>7. Estudo de Caso Real: Por que o Actions falhou na 1ª tentativa e como resolvemos</h2>
+<p>
+  Durante a implementação da Fase 7, passamos exatamente pela situação clássica que todo time de tecnologia enfrenta:
+</p>
+
+<div class="step-list">
+  <div class="step-item">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <b>Sintoma:</b> No terminal local, <code>mypy app</code> passava sem nenhum erro (0 erros em 28 arquivos).
+      Porém, ao subir para o GitHub, o job <code>pipeline</code> ficou vermelho.
+    </div>
+  </div>
+  <div class="step-item">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <b>Diagnóstico no log do GitHub Actions:</b>
+      O passo <code>Lint with Ruff</code> passou com louvor. Mas no passo <code>Type check with Mypy</code>, surgiram dezenas de erros:
+<pre><code>app/core/config.py:3: <span class="err">error: Cannot find implementation or library stub for module named "pydantic_settings"</span>
+app/core/database.py:4: <span class="err">error: Cannot find implementation or library stub for module named "psycopg"</span>
+app/core/database.py:5: <span class="err">error: Cannot find implementation or library stub for module named "psycopg.rows"</span></code></pre>
+    </div>
+  </div>
+  <div class="step-item green">
+    <div class="step-num green">3</div>
+    <div class="step-body">
+      <b>Causa Raiz Descoberta:</b>
+      O workflow rodava <code>pip install .[dev]</code> (que lia apenas o <code>pyproject.toml</code>). No entanto,
+      pacotes vitais do projeto como <code>pydantic-settings</code> e <code>psycopg</code> estavam declarados no
+      <code>requirements.txt</code>! Na VM zerada do GitHub, eles simplesmente não haviam sido instalados.
+    </div>
+  </div>
+  <div class="step-item green">
+    <div class="step-num green">4</div>
+    <div class="step-body">
+      <b>Correção Aplicada:</b> Adicionamos a instalação explícita do <code>requirements.txt</code> na etapa de setup do workflow.
+<pre><code>- name: Install dependencies
+  run: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+    pip install .[dev]</code></pre>
+    </div>
+  </div>
+  <div class="step-item green">
+    <div class="step-num green">5</div>
+    <div class="step-body">
+      <b>Resultado da Execução #3:</b>
+      Sucesso total em <b>42 segundos</b>. O pipeline executou Lint, Mypy em 28 arquivos, 176 testes unitários/integração
+      com 100% de cobertura e build do pacote Python!
+    </div>
+  </div>
+</div>
+
+<!-- ============ WORKFLOW COMPLETO ============ -->
+<h2>8. O Arquivo Final do Pipeline: <code>.github/workflows/ci.yml</code></h2>
+<p>
+  Abaixo está a configuração completa e comentada que governa a esteira de integração contínua do Open Wealth:
+</p>
+
+<div class="card">
+<pre><code><span class="k">name:</span> CI
+
+<span class="k">on:</span>
+  <span class="k">push:</span>
+    <span class="k">branches:</span> [ main ]
+  <span class="k">pull_request:</span>
+    <span class="k">branches:</span> [ main ]
+
+<span class="k">jobs:</span>
+  <span class="k">pipeline:</span>
+    <span class="k">runs-on:</span> ubuntu-latest
+
+    <span class="k">steps:</span>
+      - <span class="k">name:</span> Checkout code
+        <span class="k">uses:</span> actions/checkout@v4
+
+      - <span class="k">name:</span> Set up Python 3.11
+        <span class="k">uses:</span> actions/setup-python@v5
+        <span class="k">with:</span>
+          <span class="k">python-version:</span> <span class="s">"3.11"</span>
+          <span class="k">cache:</span> <span class="s">"pip"</span>
+
+      - <span class="k">name:</span> Install dependencies
+        <span class="k">run:</span> |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install .[dev]
+
+      - <span class="k">name:</span> Lint with Ruff
+        <span class="k">run:</span> |
+          ruff check .
+          ruff format --check .
+
+      - <span class="k">name:</span> Type check with Mypy
+        <span class="k">run:</span> |
+          mypy app
+
+      - <span class="k">name:</span> Run tests with Coverage
+        <span class="k">run:</span> |
+          pytest --cov=app --cov-report=term-missing
+
+      - <span class="k">name:</span> Build package check
+        <span class="k">run:</span> |
+          pip install build
+          python -m build</code></pre>
+</div>
+
+<!-- ============ COMANDOS DE CONSULTA RAPIDA ============ -->
+<h2>9. Guia Rápido de Comandos do Desenvolvedor</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Ação Desejada</th>
+      <th>Comando no Terminal Local</th>
+      <th>O que faz</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>Rodar todos os testes</b></td>
+      <td><code>pytest -v</code></td>
+      <td>Executa os 176 testes com detalhe por função</td>
+    </tr>
+    <tr>
+      <td><b>Testes com Cobertura</b></td>
+      <td><code>pytest --cov=app --cov-report=term-missing</code></td>
+      <td>Gera a tabela percentual e verifica o <code>fail_under = 100</code></td>
+    </tr>
+    <tr>
+      <td><b>Lint com autocorreção</b></td>
+      <td><code>ruff check --fix</code></td>
+      <td>Verifica violações e corrige imports/estilo automaticamente</td>
+    </tr>
+    <tr>
+      <td><b>Formatação de código</b></td>
+      <td><code>ruff format</code></td>
+      <td>Padroniza aspas, espaçamento e quebras de linha</td>
+    </tr>
+    <tr>
+      <td><b>Checagem de Tipos</b></td>
+      <td><code>mypy app</code></td>
+      <td>Valida anotações de tipo nos 28 módulos da aplicação</td>
+    </tr>
+    <tr>
+      <td><b>Validar pré-commit em lote</b></td>
+      <td><code>pre-commit run --all-files</code></td>
+      <td>Executa Ruff, Format e Mypy em todos os arquivos rastreados</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ============ CONCLUSAO ============ -->
+<h2>10. Conclusão: Por que o Open Wealth agora é um Projeto de Nível Sênior</h2>
+<div class="card success">
+  <p>
+    Com a conclusão da <b>Fase 7</b>, o Open Wealth concluiu sua jornada de maturidade técnica:
+  </p>
+  <ul>
+    <li>Deixou de ser um script experimental de consolidação de contas (Fase 1);</li>
+    <li>Ganhou arquitetura limpa em camadas (Fase 2);</li>
+    <li>Armazena e modela séries temporais de patrimônio (Fase 3);</li>
+    <li>Expõe contratos REST documentados via FastAPI (Fase 4);</li>
+    <li>Gera inteligência analítica de alocação e risco (Fase 5);</li>
+    <li>Executa de forma autônoma e agendada (Fase 6);</li>
+    <li>E agora, <b>está 100% blindado contra regressões, com tipagem formal, testes exaustivos e validação contínua na nuvem (Fase 7).</b></li>
+  </ul>
+</div>
+
+
+
+<!-- OW Bottom Navigation Grid -->
+<nav class="ow-nav-bottom-container" aria-label="Navegação inferior">
+  <div class="ow-nav-bottom-grid">
+    <div class="ow-nav-card ow-nav-card-prev">
+      <a href="ow6_scheduler.html" class="ow-nav-card-link">
+        <span class="ow-nav-subtext">&larr; Fase Anterior</span>
+        <span class="ow-nav-title">Fase 6: Automação & Sincronização Diária</span>
+      </a></div>
+    <div class="ow-nav-card-center">
+      <a href="tutorial_geral.html" class="ow-nav-home-btn" title="Voltar à Trilha Completa">
+        🏠 Hub Geral (Fases 1 a 9)
+      </a></div>
+    <div class="ow-nav-card ow-nav-card-next">
+      <a href="ow8_observabilidade.html" class="ow-nav-card-link">
+        <span class="ow-nav-subtext">Próxima Fase &rarr;</span>
+        <span class="ow-nav-title">Fase 8: Observabilidade SRE</span>
+      </a></div>
+  </div>
+</nav>
+
+<footer>
+  Open Wealth · Documentação Técnica · Tutorial da Fase 7 (Qualidade de Software & CI/CD) · 2026
+</footer>
+
+</main>
+</body>
+</html>

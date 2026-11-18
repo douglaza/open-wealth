@@ -42,7 +42,7 @@ def test_get_totals_agrega_por_instituicao():
 
 
 class TestValorPosicaoInvestimento:
-    """Regressão: bug do value null / amount divergente (CONTEXT.md 4.8)."""
+    """Regressão: bug do value null / amount divergente."""
 
     def _make_client(self, investments):
         client = MagicMock()

@@ -5,7 +5,7 @@ description = "Open Wealth - agregador de carteiras e investimentos"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "Douglas Laza" }]
+authors = [{ name = "Douglas Costa" }]
 dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.29",
@@ -19,6 +19,7 @@ dependencies = [
     "streamlit>=1.49",
     "psycopg[binary]>=3.2",
     "prometheus-client>=0.20",
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
@@ -26,7 +27,6 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=4.1",
     "pytest-mock>=3.14",
-    "httpx>=0.27",
     "ruff>=0.4",
     "mypy>=1.10",
 ]
@@ -46,7 +46,7 @@ line-length = 100
 target-version = "py311"
 extend-exclude = [
     ".venv",
-    "dashboard",       # exclui o Streamlit (evita N999 em dashboard/Home.py)
+    "dashboard",
 ]
 
 [tool.ruff.lint]
@@ -77,6 +77,9 @@ known-first-party = ["app"]
 quote-style = "double"
 indent-style = "space"
 
+[tool.black]
+line-length = 100
+preview = true
 
 # ---------------------------------------------------------------------------
 # Pytest

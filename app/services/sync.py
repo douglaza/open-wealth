@@ -3,6 +3,7 @@
 import logging
 import os
 import time
+from collections import defaultdict
 from datetime import date
 from typing import Any
 
@@ -12,6 +13,8 @@ from app.core.metrics import (
     ACCOUNTS_TOTAL,
     INVESTMENTS_TOTAL,
     LAST_SYNC_TIMESTAMP,
+    PATRIMONIO_BY_CATEGORY_BRL,
+    PATRIMONIO_BY_INSTITUTION_BRL,
     PLUGGY_ERRORS_TOTAL,
     SYNC_DURATION_SECONDS,
     TOTAL_PATRIMONIO_BRL,
@@ -100,6 +103,9 @@ def sync_weekly(client=None, repo=None, item_ids: list[str] | None = None):
             total_patrimonio = 0.0
             any_synced = False
 
+            patrimonio_por_instituicao: dict[str, float] = defaultdict(float)
+            patrimonio_por_categoria: dict[str, float] = defaultdict(float)
+
             for target_id in target_ids:
                 item = client.get_item(target_id) if target_id else client.get_item()
 
@@ -141,6 +147,10 @@ def sync_weekly(client=None, repo=None, item_ids: list[str] | None = None):
 
                 for account in accounts:
                     balance = account.get("balance")
+                    cat = _map_category(account)
+                    val = float(balance) if balance is not None else 0.0
+                    patrimonio_por_instituicao[institution] += val
+                    patrimonio_por_categoria[cat] += val
                     repo.save_snapshot_row(
                         snapshot_date,
                         institution,
@@ -152,6 +162,10 @@ def sync_weekly(client=None, repo=None, item_ids: list[str] | None = None):
                     repo.upsert_account(account, item_id, snapshot_date)
 
                 for investment in investments:
+                    cat = investment.get("type") or "INVESTMENT"
+                    val = _investment_amount(investment)
+                    patrimonio_por_instituicao[institution] += val
+                    patrimonio_por_categoria[cat] += val
                     repo.save_snapshot_row(
                         snapshot_date,
                         institution,
@@ -184,6 +198,12 @@ def sync_weekly(client=None, repo=None, item_ids: list[str] | None = None):
                 ACCOUNTS_TOTAL.set(total_accounts)
                 INVESTMENTS_TOTAL.set(total_investments)
                 TOTAL_PATRIMONIO_BRL.set(total_patrimonio)
+
+                for inst, val in patrimonio_por_instituicao.items():
+                    PATRIMONIO_BY_INSTITUTION_BRL.labels(institution=inst).set(val)
+
+                for cat, val in patrimonio_por_categoria.items():
+                    PATRIMONIO_BY_CATEGORY_BRL.labels(category=cat).set(val)
 
         except Exception as exc:
             if isinstance(exc, PluggyError):

@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutorial Fase 9 — Insights com IA | Open Wealth</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: "Inter", sans-serif; }
+    code, pre { font-family: "JetBrains Mono", monospace; }
+  </style>
+
+<style id="ow-nav-styles">
+  .ow-nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.65rem 1rem;
+    background: #0b1120;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    margin: 1.25rem 0 2rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+  }
+  .ow-nav-item {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+  }
+  .ow-nav-item:nth-child(2) {
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  .ow-nav-item:last-child {
+    justify-content: flex-end;
+  }
+  .ow-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #38bdf8;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ow-nav-link:hover {
+    color: #7dd3fc;
+    text-decoration: underline;
+  }
+  .ow-nav-link.home {
+    background: #1e293b;
+    color: #f1f5f9;
+    padding: 0.35rem 0.85rem;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    font-weight: 600;
+    font-size: 0.82rem;
+  }
+  .ow-nav-link.home:hover {
+    background: #334155;
+    color: #38bdf8;
+    text-decoration: none;
+    border-color: #475569;
+  }
+  .ow-nav-disabled {
+    color: #475569;
+    font-size: 0.82rem;
+    user-select: none;
+  }
+  .ow-nav-bottom-container {
+    margin: 3.5rem 0 2rem;
+    border-top: 1px solid #1e293b;
+    padding-top: 2rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    box-sizing: border-box;
+  }
+  .ow-nav-bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  .ow-nav-card {
+    background: #0b1120;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+  }
+  .ow-nav-card:hover:not(.ow-nav-card-disabled) {
+    border-color: #38bdf8;
+    background: #0f172a;
+  }
+  .ow-nav-card-link {
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: center;
+  }
+  .ow-nav-card-prev {
+    text-align: left;
+  }
+  .ow-nav-card-next {
+    text-align: right;
+  }
+  .ow-nav-card-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ow-nav-home-btn {
+    background: #1e293b;
+    color: #f1f5f9;
+    border: 1px solid #334155;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  .ow-nav-home-btn:hover {
+    background: #334155;
+    color: #38bdf8;
+    border-color: #475569;
+  }
+  .ow-nav-subtext {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+  .ow-nav-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+  .ow-nav-card-disabled {
+    opacity: 0.45;
+  }
+  @media (max-width: 680px) {
+    .ow-nav-bar {
+      flex-direction: column;
+      gap: 0.5rem;
+      text-align: center;
+    }
+    .ow-nav-item, .ow-nav-item:last-child {
+      justify-content: center;
+      text-align: center;
+    }
+    .ow-nav-bottom-grid {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+    .ow-nav-card-prev, .ow-nav-card-next {
+      text-align: center;
+    }
+  }
+</style>
+
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased selection:bg-amber-500/30 selection:text-amber-200">
+
+  <!-- Header / Hero -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-bold text-slate-950 shadow-lg shadow-amber-500/20 text-lg">
+          OW
+        </div>
+        <div>
+          <span class="text-xs uppercase tracking-wider font-semibold text-amber-400">Open Wealth &bull; Documentação</span>
+          <h1 class="text-lg font-bold text-slate-100 leading-tight">Tutorial Fase 9 — Insights com IA</h1>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 text-xs">
+        <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">100% Cobertura</span>
+        <span class="px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Clean Architecture</span>
+        <span class="px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">Ollama &bull; Llama 3.2</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-12">
+
+<!-- OW Top Navigation Bar -->
+<nav class="ow-nav-bar" aria-label="Navegação superior">
+  <div class="ow-nav-item"><a href="ow8_observabilidade.html" class="ow-nav-link" title="Fase 8: Observabilidade SRE">&larr; Fase 8: Observabilidade SRE</a></div>
+  <div class="ow-nav-item"><a href="tutorial_geral.html" class="ow-nav-link home" title="Voltar ao Tutorial Geral">🏠 Visão Geral / Home</a></div>
+  <div class="ow-nav-item"><span class="ow-nav-disabled">Fim da Trilha &rarr;</span></div>
+</nav>
+
+
+
+    <!-- Hero Card -->
+    <section class="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/60 to-slate-950 p-8 shadow-2xl relative overflow-hidden">
+      <div class="absolute -right-20 -top-20 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="max-w-3xl space-y-4">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-400/10 text-amber-300 border border-amber-400/20">
+          ✨ Efeito "Uau" com Engenharia de Contexto
+        </span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+          Assistente Patrimonial Inteligente com LLM e Métricas Determinísticas
+        </h2>
+        <p class="text-slate-300 text-base sm:text-lg leading-relaxed">
+          A Fase 9 introduz um consultor executivo que transforma números frios de carteira em respostas analíticas imediatas em linguagem natural. A chave da engenharia não é perguntar direto ao modelo, mas alimentar um <strong class="text-amber-300 font-semibold">Context Engine</strong> em Python que calcula os números com precisão matemática antes da inferência.
+        </p>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-8 border-t border-slate-800/80">
+        <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+          <div class="text-xs text-slate-400 font-medium">Paradigma</div>
+          <div class="text-base font-bold text-white mt-1">Determinístico + LLM</div>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+          <div class="text-xs text-slate-400 font-medium">Modelos Suportados</div>
+          <div class="text-base font-bold text-amber-400 mt-1">Ollama / OpenAI</div>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+          <div class="text-xs text-slate-400 font-medium">Testes Automatizados</div>
+          <div class="text-base font-bold text-emerald-400 mt-1">221 testes (100% cov)</div>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+          <div class="text-xs text-slate-400 font-medium">Observabilidade</div>
+          <div class="text-base font-bold text-blue-400 mt-1">Prometheus + Grafana</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture & Flow -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-sm">1</div>
+        <h3 class="text-2xl font-bold text-white">Arquitetura da Solução e Fluxo de Dados</h3>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Flow Box -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+          <h4 class="text-sm font-semibold uppercase tracking-wider text-slate-400">Fluxo Ponta a Ponta</h4>
+          <ol class="relative border-l border-slate-800 ml-3 space-y-6 text-sm">
+            <li class="pl-6 relative">
+              <div class="absolute -left-1.5 top-1.5 w-3 h-3 rounded-full bg-amber-500 border-2 border-slate-950"></div>
+              <strong class="text-white block font-medium">1. Pergunta do Usuário</strong>
+              <span class="text-slate-400 text-xs">Chat Streamlit (<code class="text-amber-300">dashboard/pages/insights.py</code>) envia a pergunta via POST HTTP.</span>
+            </li>
+            <li class="pl-6 relative">
+              <div class="absolute -left-1.5 top-1.5 w-3 h-3 rounded-full bg-blue-500 border-2 border-slate-950"></div>
+              <strong class="text-white block font-medium">2. API FastAPI & Métricas</strong>
+              <span class="text-slate-400 text-xs"><code class="text-blue-300">POST /api/v1/insights/chat</code> inicia cronômetro de latência e invoca o serviço.</span>
+            </li>
+            <li class="pl-6 relative">
+              <div class="absolute -left-1.5 top-1.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-slate-950"></div>
+              <strong class="text-white block font-medium">3. ContextBuilder (Python Determinístico)</strong>
+              <span class="text-slate-400 text-xs">Calcula variação 90d, custodiante líder, alocação RV/RF e dívidas consolidadas.</span>
+            </li>
+            <li class="pl-6 relative">
+              <div class="absolute -left-1.5 top-1.5 w-3 h-3 rounded-full bg-purple-500 border-2 border-slate-950"></div>
+              <strong class="text-white block font-medium">4. InsightsService & LLMClient</strong>
+              <span class="text-slate-400 text-xs">Injeta contexto imutável no prompt executivo e despacha para Ollama ou OpenAI.</span>
+            </li>
+            <li class="pl-6 relative">
+              <div class="absolute -left-1.5 top-1.5 w-3 h-3 rounded-full bg-amber-400 border-2 border-slate-950"></div>
+              <strong class="text-white block font-medium">5. Resposta ao Usuário</strong>
+              <span class="text-slate-400 text-xs">Retorna resposta analítica e objeto <code class="text-amber-300">context_used</code> para auditoria/expansor.</span>
+            </li>
+          </ol>
+        </div>
+
+        <!-- Clean Architecture Mapping -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+          <h4 class="text-sm font-semibold uppercase tracking-wider text-slate-400">Desacoplamento em Camadas</h4>
+          <div class="space-y-3 text-xs">
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+              <span class="text-amber-400 font-semibold block mb-1">Domain (<code class="text-slate-300">app/domain/insights.py</code>)</span>
+              Modelos Pydantic imutáveis: <code class="text-slate-400">PortfolioContext</code>, <code class="text-slate-400">InsightChatRequest</code>, <code class="text-slate-400">InsightChatResponse</code>.
+            </div>
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+              <span class="text-blue-400 font-semibold block mb-1">Integrations (<code class="text-slate-300">app/integrations/llm_client.py</code>)</span>
+              Protocolo tipado <code class="text-slate-400">BaseLLMClient</code> com implementações: <code class="text-slate-400">OllamaLLMClient</code>, <code class="text-slate-400">OpenAILLMClient</code> e <code class="text-slate-400">MockLLMClient</code>.
+            </div>
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+              <span class="text-emerald-400 font-semibold block mb-1">Services (<code class="text-slate-300">app/services/</code>)</span>
+              <code class="text-slate-400">ContextBuilder</code> (cálculos numéricos) e <code class="text-slate-400">InsightsService</code> (orquestrador de prompt).
+            </div>
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+              <span class="text-purple-400 font-semibold block mb-1">API & Presentation (<code class="text-slate-300">app/api/</code> & <code class="text-slate-300">dashboard/</code>)</span>
+              Injeção de dependências no FastAPI e interface interativa em Streamlit.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Engineering Decisions & Bugs Fixed -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-sm">2</div>
+        <h3 class="text-2xl font-bold text-white">Engenharia de Prompt & Lições de Implementação</h3>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <!-- Card 1 -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-5 space-y-3">
+          <div class="flex items-center gap-2 text-rose-400 font-semibold text-sm">
+            <span>🛡️ Prevenção de Alucinação</span>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Nunca peça para uma LLM calcular percentuais ou variações patrimoniais. A regra inegociável do sistema é: <em>"NUNCA calcule números. Use estritamente os valores fornecidos no contexto."</em>
+          </p>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-5 space-y-3">
+          <div class="flex items-center gap-2 text-amber-400 font-semibold text-sm">
+            <span>🏷️ Normalização de Renda Variável</span>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            O Pluggy expõe ativos com <code class="text-amber-300">type="EQUITY"</code> ou <code class="text-amber-300">MUTUAL_FUND</code> com sufixos "Ações" e "FIA". O <code class="text-slate-300">ContextBuilder</code> inspeciona tipo, categoria e nome para somar ações com exatidão.
+          </p>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-5 space-y-3">
+          <div class="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+            <span>⚡ Otimização CPU com Ollama</span>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Em máquinas virtuais ou CPUs locais, gerar respostas longas causa timeout (>90s). A configuração de <code class="text-emerald-300">num_predict: 120-180</code> restringe a saída e reduz o tempo de resposta em até 70%.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step-by-Step Execution Guide -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-sm">3</div>
+        <h3 class="text-2xl font-bold text-white">Como Executar Localmente</h3>
+      </div>
+
+      <div class="space-y-4">
+        <!-- Terminal 1 -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
+          <div class="px-4 py-2.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+            <span class="font-mono flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Terminal 1 &bull; Provedor de IA (Ollama Local)
+            </span>
+            <span>llama3.2:1b</span>
+          </div>
+          <div class="p-4 font-mono text-xs text-slate-200 overflow-x-auto space-y-2">
+            <p class="text-slate-500"># Instalar e iniciar o modelo ultraleve para CPU</p>
+            <p><span class="text-amber-400">$</span> ollama run llama3.2:1b</p>
+          </div>
+        </div>
+
+        <!-- Terminal 2 -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
+          <div class="px-4 py-2.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+            <span class="font-mono flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Terminal 2 &bull; Backend FastAPI
+            </span>
+            <span>porta 8000</span>
+          </div>
+          <div class="p-4 font-mono text-xs text-slate-200 overflow-x-auto space-y-2">
+            <p class="text-slate-500"># Configurar provedor e iniciar Uvicorn</p>
+            <p><span class="text-amber-400">$</span> export LLM_PROVIDER=ollama</p>
+            <p><span class="text-amber-400">$</span> export OLLAMA_MODEL=llama3.2:1b</p>
+            <p><span class="text-amber-400">$</span> ./.venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000</p>
+          </div>
+        </div>
+
+        <!-- Terminal 3 -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
+          <div class="px-4 py-2.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+            <span class="font-mono flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Terminal 3 &bull; Dashboard Streamlit
+            </span>
+            <span>porta 8501</span>
+          </div>
+          <div class="p-4 font-mono text-xs text-slate-200 overflow-x-auto space-y-2">
+            <p class="text-slate-500"># Iniciar a interface Web</p>
+            <p><span class="text-amber-400">$</span> streamlit run dashboard/Home.py</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Verification & CI/CD Pipeline -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-sm">4</div>
+        <h3 class="text-2xl font-bold text-white">Pipeline de Qualidade e Cobertura 100%</h3>
+      </div>
+
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+        <p class="text-sm text-slate-300">
+          O Open Wealth adota padrões rigorosos de engenharia com linter, tipagem estática e política de <code class="text-amber-300">fail_under = 100</code> no Pytest:
+        </p>
+
+        <div class="p-4 rounded-lg bg-slate-950 border border-slate-800 font-mono text-xs text-slate-200">
+          <p><span class="text-amber-400">$</span> ruff check . && mypy app && pytest --cov=app --cov-report=term-missing</p>
+          <div class="mt-3 pt-3 border-t border-slate-800/80 text-emerald-400 space-y-1">
+            <p>All checks passed!</p>
+            <p>Success: no issues found in 34 source files</p>
+            <p>================== 221 passed in 5.01s ==================</p>
+            <p>Required test coverage of 100.0% reached. Total coverage: 100.0%</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    
+
+<!-- OW Bottom Navigation Grid -->
+<nav class="ow-nav-bottom-container" aria-label="Navegação inferior">
+  <div class="ow-nav-bottom-grid">
+    <div class="ow-nav-card ow-nav-card-prev">
+      <a href="ow8_observabilidade.html" class="ow-nav-card-link">
+        <span class="ow-nav-subtext">&larr; Fase Anterior</span>
+        <span class="ow-nav-title">Fase 8: Observabilidade SRE</span>
+      </a></div>
+    <div class="ow-nav-card-center">
+      <a href="tutorial_geral.html" class="ow-nav-home-btn" title="Voltar à Trilha Completa">
+        🏠 Hub Geral (Fases 1 a 9)
+      </a></div>
+    <div class="ow-nav-card ow-nav-card-next">
+      <div class="ow-nav-card-disabled">
+        <span class="ow-nav-subtext">Você concluiu a jornada</span>
+        <span class="ow-nav-title">Fase 9: Insights com IA & Context Engine</span>
+      </div></div>
+  </div>
+</nav>
+
+<footer class="pt-8 border-t border-slate-800/80 text-center text-xs text-slate-500">
+      <p>Open Wealth &bull; Plataforma de Consolidação Patrimonial com Open Finance e Observabilidade SRE.</p>
+    </footer>
+
+  </main>
+</body>
+</html>

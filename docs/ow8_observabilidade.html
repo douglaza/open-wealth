@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Wealth — Tutorial da Fase 8</title>
+    <style>
+      :root {
+        --accent: #4f8ef7;
+        --bg: #0f1420;
+        --fg: #e6e9f0;
+        --card-bg: #1a2130;
+        --card-border: #2a3348;
+        --ok: #3ddc84;
+        --warn: #ffb454;
+        --code-bg: #0b0f18;
+        --muted: #9aa4b8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 2.5rem 1.5rem 4rem;
+      }
+
+      header h1 {
+        font-size: 1.9rem;
+        margin-bottom: 0.2rem;
+      }
+
+      header .sub {
+        color: var(--muted);
+        margin-bottom: 2rem;
+      }
+
+      h2 {
+        font-size: 1.35rem;
+        margin-top: 2.8rem;
+        border-bottom: 1px solid var(--card-border);
+        padding-bottom: 0.4rem;
+      }
+
+      h3 {
+        font-size: 1.05rem;
+        color: var(--accent);
+      }
+
+      code {
+        background: var(--code-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 4px;
+        padding: 0.1rem 0.35rem;
+        font-size: 0.9em;
+        font-family: "JetBrains Mono", "Fira Code", monospace;
+      }
+
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 8px;
+        padding: 1rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+        line-height: 1.5;
+      }
+
+      pre code {
+        background: none;
+        border: none;
+        padding: 0;
+      }
+
+      .card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 10px;
+        padding: 1rem 1.2rem;
+        margin: 1rem 0;
+      }
+
+      .card.destaque {
+        border-color: var(--accent);
+      }
+
+      .ok {
+        color: var(--ok);
+        font-weight: 600;
+      }
+
+      .warn {
+        color: var(--warn);
+        font-weight: 600;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+        font-size: 0.92rem;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--card-border);
+        padding: 0.5rem 0.7rem;
+        text-align: left;
+      }
+
+      th {
+        background: var(--card-bg);
+      }
+
+      .flow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.7rem;
+        align-items: stretch;
+        margin: 1rem 0;
+      }
+
+      .node {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 10px;
+        padding: 0.7rem 1rem;
+        flex: 1 1 160px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        font-size: 0.92rem;
+      }
+
+      .node b {
+        color: var(--accent);
+      }
+
+      .node small {
+        color: var(--muted);
+        margin-top: 0.3rem;
+      }
+
+      footer {
+        margin-top: 3rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--card-border);
+        color: var(--muted);
+        font-size: 0.85rem;
+        text-align: center;
+      }
+    </style>
+  
+<style id="ow-nav-styles">
+  .ow-nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.65rem 1rem;
+    background: #0b1120;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    margin: 1.25rem 0 2rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+  }
+  .ow-nav-item {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+  }
+  .ow-nav-item:nth-child(2) {
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  .ow-nav-item:last-child {
+    justify-content: flex-end;
+  }
+  .ow-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #38bdf8;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ow-nav-link:hover {
+    color: #7dd3fc;
+    text-decoration: underline;
+  }
+  .ow-nav-link.home {
+    background: #1e293b;
+    color: #f1f5f9;
+    padding: 0.35rem 0.85rem;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    font-weight: 600;
+    font-size: 0.82rem;
+  }
+  .ow-nav-link.home:hover {
+    background: #334155;
+    color: #38bdf8;
+    text-decoration: none;
+    border-color: #475569;
+  }
+  .ow-nav-disabled {
+    color: #475569;
+    font-size: 0.82rem;
+    user-select: none;
+  }
+  .ow-nav-bottom-container {
+    margin: 3.5rem 0 2rem;
+    border-top: 1px solid #1e293b;
+    padding-top: 2rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    box-sizing: border-box;
+  }
+  .ow-nav-bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  .ow-nav-card {
+    background: #0b1120;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+  }
+  .ow-nav-card:hover:not(.ow-nav-card-disabled) {
+    border-color: #38bdf8;
+    background: #0f172a;
+  }
+  .ow-nav-card-link {
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: center;
+  }
+  .ow-nav-card-prev {
+    text-align: left;
+  }
+  .ow-nav-card-next {
+    text-align: right;
+  }
+  .ow-nav-card-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ow-nav-home-btn {
+    background: #1e293b;
+    color: #f1f5f9;
+    border: 1px solid #334155;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  .ow-nav-home-btn:hover {
+    background: #334155;
+    color: #38bdf8;
+    border-color: #475569;
+  }
+  .ow-nav-subtext {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+  .ow-nav-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+  .ow-nav-card-disabled {
+    opacity: 0.45;
+  }
+  @media (max-width: 680px) {
+    .ow-nav-bar {
+      flex-direction: column;
+      gap: 0.5rem;
+      text-align: center;
+    }
+    .ow-nav-item, .ow-nav-item:last-child {
+      justify-content: center;
+      text-align: center;
+    }
+    .ow-nav-bottom-grid {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+    .ow-nav-card-prev, .ow-nav-card-next {
+      text-align: center;
+    }
+  }
+</style>
+
+</head>
+  <body>
+    <main>
+
+<!-- OW Top Navigation Bar -->
+<nav class="ow-nav-bar" aria-label="Navegação superior">
+  <div class="ow-nav-item"><a href="ow7_qa.html" class="ow-nav-link" title="Fase 7: Qualidade de Software & CI/CD">&larr; Fase 7: Qualidade & CI/CD</a></div>
+  <div class="ow-nav-item"><a href="tutorial_geral.html" class="ow-nav-link home" title="Voltar ao Tutorial Geral">🏠 Visão Geral / Home</a></div>
+  <div class="ow-nav-item"><a href="ow9_ia.html" class="ow-nav-link" title="Fase 9: Insights com IA & Context Engine">Fase 9: Insights com IA &rarr;</a></div>
+</nav>
+
+
+      <header>
+        <h1>Open Wealth — Tutorial da Fase 8</h1>
+        <div class="sub">
+          Observabilidade & Métricas · Telemetria em Produção com Prometheus e Grafana
+        </div>
+        <p>
+          Nas fases anteriores, construímos o motor de sincronização com a Pluggy, persistência
+          idempotente no PostgreSQL, logs estruturados em JSON e pipeline de CI com 100% de
+          cobertura de testes. A <b>Fase 8</b> coroa o projeto com <b>Observabilidade de nível de produção (SRE)</b>:
+          métricas em tempo real expostas pela aplicação, coletadas via scraping pelo Prometheus e
+          visualizadas em dashboards dinâmicos no Grafana.
+        </p>
+      </header>
+
+      <h2>1. Por que Observabilidade? (Logs vs Métricas)</h2>
+      <p>
+        Muitos desenvolvedores confundem <i>logs</i> com <i>observabilidade</i>. Logs são excelentes para
+        investigar <b>eventos específicos e diagnósticos detalhados</b> (ex.: saber exatamente qual ID
+        falhou em um timestamp). No entanto, logs são caros para agregar em tempo real e não respondem
+        rapidamente a perguntas como:
+      </p>
+      <ul>
+        <li><i>"Quanto tempo durou a sincronização de hoje comparada à semana passada?"</i></li>
+        <li><i>"Quantos ativos estão sob custódia agora mesmo sem ter que rodar um SELECT no banco?"</i></li>
+        <li><i>"A taxa de falhas com a Pluggy aumentou nos últimos 15 minutos?"</i></li>
+      </ul>
+      <p>
+        As <b>métricas numéricas de séries temporais (TSDB)</b> resolvem isso: consomem pouquíssima
+        memória, são agregadas instantaneamente e permitem gráficos, alertas e painéis vivos.
+      </p>
+
+      <h2>2. Arquitetura do Pipeline de Telemetria</h2>
+      <div class="flow">
+        <div class="node">
+          <b>1. FastAPI (App)</b>
+          <small>app/core/metrics.py instrumenta o código e expõe <code>GET /metrics</code></small>
+        </div>
+        <div class="node">
+          <b>2. Pull / Scraping</b>
+          <small>Prometheus consulta <code>host.docker.internal:8000/metrics</code> a cada 15s</small>
+        </div>
+        <div class="node">
+          <b>3. TSDB (Prometheus)</b>
+          <small>Armazena valores numéricos com timestamps indexados</small>
+        </div>
+        <div class="node">
+          <b>4. Grafana (UI)</b>
+          <small>Executa queries PromQL e desenha painéis de negócio e SRE</small>
+        </div>
+      </div>
+
+      <div class="card destaque">
+        <b>O modelo Pull do Prometheus:</b> Ao contrário de ferramentas que exigem que o app "envie" dados
+        (push), o Prometheus faz <i>scraping</i> (puxa os dados). Se o app estiver sob carga ou fora do ar,
+        o coletor não sobrecarrega a rede e detecta imediatamente que o alvo está <code>DOWN</code>.
+      </div>
+
+      <h2>3. Catálogo de Métricas Instrumentadas</h2>
+      <p>
+        Criamos o módulo <code>app/core/metrics.py</code> utilizando a biblioteca canônica
+        <code>prometheus_client</code>. As métricas foram divididas entre <b>indicadores de negócio</b>
+        e <b>indicadores de confiabilidade (SRE)</b>:
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Métrica</th>
+            <th>Tipo</th>
+            <th>Propósito</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>open_wealth_sync_duration_seconds</code></td>
+            <td>Histogram</td>
+            <td>Mede a latência e duração da sincronização completa (com buckets, sum e count).</td>
+          </tr>
+          <tr>
+            <td><code>open_wealth_accounts_total</code></td>
+            <td>Gauge</td>
+            <td>Quantidade total de contas bancárias e cartões conectados.</td>
+          </tr>
+          <tr>
+            <td><code>open_wealth_investments_total</code></td>
+            <td>Gauge</td>
+            <td>Total de posições e ativos de investimento consolidados.</td>
+          </tr>
+          <tr>
+            <td><code>open_wealth_total_patrimonio_brl</code></td>
+            <td>Gauge</td>
+            <td>Valor total do patrimônio líquido monitorado em Reais (R$).</td>
+          </tr>
+          <tr>
+            <td><code>open_wealth_last_sync_timestamp</code></td>
+            <td>Gauge</td>
+            <td>Timestamp Unix (segundos) da última sincronização ou verificação bem-sucedida.</td>
+          </tr>
+          <tr>
+            <td><code>open_wealth_pluggy_errors_total</code></td>
+            <td>Counter</td>
+            <td>Total acumulado de falhas de comunicação com a Pluggy (com label <code>operation="sync"</code>).</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>4. Desafios Reais de Engenharia Resolvidos</h2>
+      <p>
+        A implementação em um ambiente real (VM + Docker + host local) revelou 4 armadilhas clássicas
+        que foram diagnosticadas e superadas:
+      </p>
+
+      <h3>Desafio 1: Conexão recusada entre Docker e Host</h3>
+      <div class="card">
+        <p><b>Sintoma:</b> O target no Prometheus (<code>http://host.docker.internal:8000/metrics</code>) aparecia como <span class="warn">DOWN (Connection refused)</span>.</p>
+        <p><b>Causa:</b> O Uvicorn estava rodando vinculado apenas em <code>127.0.0.1</code> (localhost). O container Docker roda em uma sub-rede virtual própria (<code>172.19.x.x</code>) e seu tráfego chegava pela interface de rede do host, onde a porta 8000 não estava escutando.</p>
+        <p><b>Solução:</b> Iniciar o Uvicorn com <code>--host 0.0.0.0 --port 8000</code>, permitindo que a aplicação receba requisições de qualquer interface, inclusive da bridge Docker.</p>
+      </div>
+
+      <h3>Desafio 2: O dilema da Idempotência vs Métricas Zeradas</h3>
+      <div class="card">
+        <p><b>Sintoma:</b> Após reiniciar a API, o Grafana mostrava <span class="warn">R$ 0</span> de patrimônio e a última sincronização como <span class="warn">"há 57 anos"</span>, mesmo após rodar <code>POST /api/v1/sync</code>.</p>
+        <p><b>Causa:</b> Como o snapshot do dia já existia no banco de dados, o <code>sync_weekly</code> ativou a regra de idempotência (<code>snapshot_skipped</code>) e retornou antecipadamente. Com isso, as linhas que atualizavam os gauges a partir do retorno da Pluggy nunca eram executadas.</p>
+        <p><b>Solução (Padrão SRE):</b>
+          <ol>
+            <li>No <code>lifespan</code> do FastAPI (<code>main.py</code>), carregamos o snapshot persistido mais recente com <code>SnapshotRepository().get_latest()</code>, alimentando os gauges logo na subida do servidor.</li>
+            <li>No <code>sync_weekly</code>, atualizamos <code>LAST_SYNC_TIMESTAMP.set(time.time())</code> mesmo em caso de skip, já que a verificação de integridade rodou com sucesso.</li>
+          </ol>
+        </p>
+      </div>
+
+      <h3>Desafio 3: "No data" em Contadores com Labels</h3>
+      <div class="card">
+        <p><b>Sintoma:</b> O card de falhas na Pluggy exibia <span class="warn">No data</span> no Grafana em vez de <code>0</code>.</p>
+        <p><b>Causa:</b> No Prometheus, um <code>Counter</code> com rótulos (labels) só exporta a série temporal na saída do <code>/metrics</code> depois de ser referenciado ao menos uma vez.</p>
+        <p><b>Solução:</b> No startup da aplicação, executamos <code>PLUGGY_ERRORS_TOTAL.labels(operation="sync")</code>. Isso inicializa a série com valor zero sem incrementar, fazendo o Grafana exibir <span class="ok">0 (Verde)</span> imediatamente.</p>
+      </div>
+
+      <h3>Desafio 4: Preservação estrita dos 100% de Cobertura de Testes</h3>
+      <div class="card">
+        <p><b>Regra do CI:</b> O arquivo <code>pyproject.toml</code> exige <code>fail_under = 100</code> no <code>pytest-cov</code>.</p>
+        <p><b>Solução:</b> A instrumentação de métricas foi desenhada para não poluir as chamadas de contrato do repositório (ex.: mantendo o teste <code>assert repo.calls == [("commit",)]</code> intacto). Todos os 176 testes unitários e de integração continuam passando com cobertura total.</p>
+      </div>
+
+      <h2>5. O Dashboard no Grafana</h2>
+      <p>
+        Criamos um dashboard com atualização automática a cada 10 segundos, estruturado em duas seções:
+      </p>
+
+      <h3>A. Visão Geral do Negócio</h3>
+      <ul>
+        <li><b>Patrimônio Total Monitorado:</b> Card Stat formatado em moeda (<code>R$</code>), agregando saldos bancários, cartão e investimentos.</li>
+        <li><b>Contas Conectadas:</b> Quantidade de contas correntes, poupanças e cartões.</li>
+        <li><b>Ativos / Investimentos:</b> Número de fundos, CDBs, ações e ETFs monitorados.</li>
+        <li><b>Falhas na API Pluggy:</b> Contador de erros com threshold verde (0) e vermelho (&gt; 0).</li>
+        <li><b>Última Sincronização:</b> Formatado como <code>dateTimeFromNow</code> (ex.: <i>"há 2 minutos"</i>).</li>
+      </ul>
+
+      <h3>B. Performance & Confiabilidade (SRE)</h3>
+      <ul>
+        <li><b>Tempo Médio de Sync:</b> Duração da última execução em milissegundos com escala de alerta (verde &lt; 5s, amarelo 5–15s, vermelho &gt; 15s).</li>
+        <li><b>Histórico do Tempo de Execução:</b> Gráfico de série temporal mostrando a evolução da latência de sincronização ao longo do tempo.</li>
+      </ul>
+
+      <h2>6. Guia Operacional</h2>
+      <pre><code># 1. Subir infraestrutura de observabilidade (PostgreSQL + Prometheus + Grafana)
+docker compose up -d
+
+# 2. Iniciar a API escutando em todas as interfaces
+./.venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# 3. Testar a coleta de métricas em texto puro
+curl http://localhost:8000/metrics
+
+# 4. Disparar uma sincronização manual
+curl -X POST http://localhost:8000/api/v1/sync
+
+# 5. Acessar os painéis
+# Prometheus Targets: http://localhost:9090/targets
+# Grafana Dashboard:  http://localhost:3000 (admin / admin)</code></pre>
+
+      
+
+<!-- OW Bottom Navigation Grid -->
+<nav class="ow-nav-bottom-container" aria-label="Navegação inferior">
+  <div class="ow-nav-bottom-grid">
+    <div class="ow-nav-card ow-nav-card-prev">
+      <a href="ow7_qa.html" class="ow-nav-card-link">
+        <span class="ow-nav-subtext">&larr; Fase Anterior</span>
+        <span class="ow-nav-title">Fase 7: Qualidade de Software & CI/CD</span>
+      </a></div>
+    <div class="ow-nav-card-center">
+      <a href="tutorial_geral.html" class="ow-nav-home-btn" title="Voltar à Trilha Completa">
+        🏠 Hub Geral (Fases 1 a 9)
+      </a></div>
+    <div class="ow-nav-card ow-nav-card-next">
+      <a href="ow9_ia.html" class="ow-nav-card-link">
+        <span class="ow-nav-subtext">Próxima Fase &rarr;</span>
+        <span class="ow-nav-title">Fase 9: Insights com IA & Context Engine</span>
+      </a></div>
+  </div>
+</nav>
+
+<footer>
+        Open Wealth · Fase 8 concluída com sucesso · Observabilidade em Produção (Prometheus & Grafana)
+      </footer>
+    </main>
+  </body>
+</html>

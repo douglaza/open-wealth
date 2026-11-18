@@ -124,14 +124,3 @@ class PluggyClient:
                 break
             cursor = data.get("nextCursor")
         return all_tx
-
-    # Deixar comentado por enquanto — a listagem /items dá 401 no modo Development
-    # def get_items(self) -> list:
-    #     items, page = [], 1
-    #     while True:
-    #         data = self._get("/items", params={"page": page, "pageSize": 100})
-    #         items.extend(self._extract_results(data))
-    #         if page >= (data.get("totalPages", 1) if isinstance(data, dict) else 1):
-    #             break
-    #         page += 1
-    #     return items

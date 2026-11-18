@@ -6,9 +6,9 @@ data/exports/
 .env
 .claude/
 .agents/
-docs/*
-!docs/arquitetura.md
-!docs/CONTEXT.md
-!docs/CONTEXT-HISTORY.md
+# docs/*
+# !docs/arquitetura.md
+# !docs/CONTEXT.md
+# !docs/CONTEXT-HISTORY.md
 *.pyc
 *.db

@@ -136,9 +136,11 @@ def concentracao(
         "top1_percentual": round(float(top1[1] / total * 100), 1),
         "n_instituicoes": len(agregado),
         "hhi": hhi,
-        "classificacao": "altamente concentrado"
-        if hhi > 2500
-        else "moderadamente concentrado"
-        if hhi > 1500
-        else "distribuído",
+        "classificacao": (
+            "altamente concentrado"
+            if hhi > 2500
+            else "moderadamente concentrado"
+            if hhi > 1500
+            else "distribuído"
+        ),
     }

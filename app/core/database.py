@@ -172,6 +172,17 @@ CREATE TABLE IF NOT EXISTS snapshots (
     amount          REAL NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS manual_positions (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    name            TEXT NOT NULL,
+    type            TEXT NOT NULL,
+    institution     TEXT NOT NULL,
+    category        TEXT NOT NULL,
+    amount          REAL NOT NULL,
+    updated_at      TEXT DEFAULT (datetime('now'))
+);
+
+
 CREATE INDEX IF NOT EXISTS idx_snapshots_date ON snapshots(snapshot_date);
 CREATE INDEX IF NOT EXISTS idx_snapshots_inst  ON snapshots(institution);
 
@@ -235,6 +246,17 @@ CREATE TABLE IF NOT EXISTS snapshots (
     category        TEXT NOT NULL,
     amount          NUMERIC(20,4) NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS manual_positions (
+    id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name            TEXT NOT NULL,
+    type            TEXT NOT NULL,
+    institution     TEXT NOT NULL,
+    category        TEXT NOT NULL,
+    amount          NUMERIC(20,4) NOT NULL,
+    updated_at      TEXT DEFAULT (now())::text
+);
+
 
 CREATE INDEX IF NOT EXISTS idx_snapshots_date ON snapshots(snapshot_date);
 CREATE INDEX IF NOT EXISTS idx_snapshots_inst  ON snapshots(institution);

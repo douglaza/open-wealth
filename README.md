@@ -10,10 +10,16 @@ snapshots, persistência em SQLite, API FastAPI e visualizações em Streamlit.
 
 ## Tutorial
 
+- [Tutorial da Fase 9 — Insights com IA (Assistente Patrimonial)](docs/tutorial_fase9.html).
 - [Tutorial da Fase 8 — Observabilidade](docs/tutorial_fase8.html).
 
 ## Funcionalidades implementadas
 
+- **Assistente Patrimonial Inteligente (Fase 9):** chat interativo no Streamlit com respostas executivas e contextuais em linguagem natural.
+- **Context Engine determinístico:** cálculo estrito de métricas patrimoniais em Python (`PortfolioContext`) antes de consultar o modelo, prevenindo alucinações matemáticas.
+- **Arquitetura de LLM desacoplada (`BaseLLMClient`):** suporte intercambiável a provedores locais gratuitos (`Ollama` com Llama 3.2), cloud (`OpenAI` com GPT-4o-mini) e mocks para testes unitários rápidos.
+- **Endpoint `POST /api/v1/insights/chat`:** API REST protegida e instrumentada com métricas Prometheus (`INSIGHTS_REQUESTS_TOTAL`, `INSIGHTS_LATENCY_SECONDS`).
+- **Detecção multiclasse de ativos:** mapeamento inteligente de renda variável por `type="EQUITY"`, fundos de ações (`MUTUAL_FUND` com FIA) e renda fixa.
 - Cliente Pluggy com autenticação, consultas de item, contas e investimentos.
 - Consulta de transações pela API v2 da Pluggy, com paginação por cursor.
 - Consolidação do item configurado em um `Snapshot` diário.
@@ -40,9 +46,9 @@ snapshots, persistência em SQLite, API FastAPI e visualizações em Streamlit.
 - O modo de privacidade desfoca valores de métricas e tabelas enquanto estiver
   ativado; passar o cursor sobre esses elementos revela os valores. Ele não
   altera os dados armazenados nem oculta os valores dos gráficos.
-- Scheduler configurado para executar às segundas-feiras às 06:00, no fuso
+- Scheduler configurado para executar diariamente às 09:00, no fuso
   `America/Sao_Paulo`.
-- 176 testes automatizados e 100% de cobertura da aplicação (`app/`).
+- 221 testes automatizados e 100% de cobertura da aplicação (`app/`).
 
 ### Regra de valoração dos investimentos
 
@@ -224,7 +230,7 @@ systemctl list-timers open-wealth-sync.timer
 Prioridades planejadas para o próximo ciclo:
 
 - Transação atômica no sync: envolver o loop de inserts do repositório com
-  `try/except` + `rollback()` (ver `CONTEXT.md §9.4`).
+  `try/except` + `rollback()` (ver [docs/CONTEXT.md](docs/CONTEXT.md)).
 - Testes de integração do sync: `sync_weekly + SnapshotRepository` contra SQLite
   em `tmp_path`/`:memory:`, cobrindo falha parcial no meio do loop de inserts.
 - Retorno do endpoint distinguindo `synced` vs `skipped`: hoje ambos respondem
@@ -260,7 +266,6 @@ Python · Pluggy API · SQLite · FastAPI · Streamlit · Pandas · APScheduler 
 
 ## Changelog desta versão
 
-- Roadmap — Fase 3 — nova seção com as prioridades extraídas do `CONTEXT.md`
   (transação atômica, testes de integração, `synced` vs `skipped`, scheduler diário).
 - Limitações — adicionadas as duas pendências conhecidas da Fase 2: sync sem
   transação atômica e resposta `202` sem distinção `synced`/`skipped`.

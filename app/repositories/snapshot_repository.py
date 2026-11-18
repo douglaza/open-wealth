@@ -133,7 +133,8 @@ class SnapshotRepository:
         return [dict(r) for r in rows]
 
     def totais_por_instituicao_ultimas_datas(self) -> list[dict]:
-        rows = self._conn.execute("""
+        rows = self._conn.execute(
+            """
             WITH datas AS (
                 SELECT DISTINCT snapshot_date FROM snapshots
                 ORDER BY snapshot_date DESC LIMIT 2
@@ -153,7 +154,8 @@ class SnapshotRepository:
                        FROM snapshots
                        WHERE snapshot_date = (SELECT MIN(snapshot_date) FROM datas)
                        GROUP BY institution) v1 ON i.institution = v1.institution
-        """).fetchall()
+        """
+        ).fetchall()
         return [dict(r) for r in rows]
 
     def _rows_to_snapshots(self, rows) -> list[Snapshot]:
@@ -246,7 +248,8 @@ class SnapshotRepository:
     # ------------------------------------------------------------------
 
     def _ensure_schema(self):
-        self._conn.executescript("""
+        self._conn.executescript(
+            """
             CREATE TABLE IF NOT EXISTS items (
                 id TEXT PRIMARY KEY,
                 institution TEXT,
@@ -282,7 +285,8 @@ class SnapshotRepository:
                 value REAL,
                 updated_at TEXT
             );
-        """)
+        """
+        )
         self._migrate_schema()
 
     def _migrate_schema(self) -> None:

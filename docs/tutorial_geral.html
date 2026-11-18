@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Wealth — Tutorial Geral e Trilha Completa (Fases 1 a 9)</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: "Inter", sans-serif; }
+    code, pre { font-family: "JetBrains Mono", monospace; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
+
+  <!-- Header / Navigation Bar -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 flex items-center justify-center font-bold text-slate-950 shadow-lg shadow-cyan-500/20 text-lg">
+          OW
+        </div>
+        <div>
+          <span class="text-xs uppercase tracking-wider font-semibold text-cyan-400">Open Wealth &bull; Hub de Documentação</span>
+          <h1 class="text-lg font-bold text-slate-100 leading-tight">Tutorial Geral — Trilha Completa (Fases 1 a 9)</h1>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 text-xs">
+        <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">9 Fases Concluídas</span>
+        <span class="px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">100% Cobertura</span>
+        <span class="px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">SRE &bull; Prometheus &bull; IA</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-12">
+
+    <!-- Hero Card -->
+    <section class="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/60 to-slate-950 p-8 shadow-2xl relative overflow-hidden">
+      <div class="absolute -right-20 -top-20 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="max-w-3xl space-y-4">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-cyan-400/10 text-cyan-300 border border-cyan-400/20">
+          🚀 Consolidação Patrimonial de Nível Sênior
+        </span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+          A Jornada Completa do Open Wealth: Do MVP ao Assistente de IA
+        </h2>
+        <p class="text-slate-300 text-base leading-relaxed">
+          O <strong>Open Wealth</strong> é uma plataforma full-stack de consolidação patrimonial pessoal que agrega contas e investimentos via Open Finance (Pluggy), combina bens e passivos manuais (imóveis e financiamento habitacional Caixa), persiste histórico temporal idempotente e expõe dados através de API REST (FastAPI), Dashboard Web (Streamlit), Observabilidade SRE em tempo real (Prometheus + Grafana) e Assistente de IA com Context Engine determinístico (Ollama/OpenAI).
+        </p>
+      </div>
+    </section>
+
+    <!-- Architecture & Data Flow -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 font-bold flex items-center justify-center text-sm border border-cyan-500/30">
+          &bull;
+        </div>
+        <div>
+          <h3 class="text-2xl font-bold text-white tracking-tight">Arquitetura Integrada e Fluxo do Dado</h3>
+          <p class="text-sm text-slate-400 mt-1">Como as 9 fases se conectam ponta a ponta na Clean Architecture.</p>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+          
+          <div class="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+            <span class="text-cyan-400 font-bold uppercase tracking-wider block">1. Coleta & Valoração (Fases 1, 5)</span>
+            <p class="text-slate-400 leading-relaxed font-sans text-xs">
+              Conexão com a API Pluggy, paginação de transações v2 e leitura de ativos e passivos manuais. Aplicação da cascata estrita:
+              <code class="text-cyan-300 block mt-1">balance &rarr; qty * price &rarr; amount &rarr; 0.0</code>
+            </p>
+          </div>
+
+          <div class="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+            <span class="text-blue-400 font-bold uppercase tracking-wider block">2. Persistência & Sync (Fases 2, 3, 6)</span>
+            <p class="text-slate-400 leading-relaxed font-sans text-xs">
+              Orquestração agendada às 09:00 BRT pelo APScheduler. Gravação diária em SQLite/PostgreSQL com verificação de idempotência para evitar duplicidade.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+            <span class="text-purple-400 font-bold uppercase tracking-wider block">3. Exposição & IA (Fases 4, 7, 8, 9)</span>
+            <p class="text-slate-400 leading-relaxed font-sans text-xs">
+              Endpoints REST FastAPI, métricas Prometheus em tempo real, painéis Grafana, suíte com 100% de cobertura e chat com IA alimentado por Context Engine determinístico.
+            </p>
+          </div>
+
+        </div>
+
+        <div class="p-4 bg-slate-950 rounded-lg border border-slate-800/80 font-mono text-xs text-slate-300 overflow-x-auto text-center">
+          <span class="text-cyan-400">Open Finance / Manual</span> &rarr;
+          <span class="text-sky-400">Domínio & Cascata</span> &rarr;
+          <span class="text-blue-400">Snapshots Idempotentes</span> &rarr;
+          <span class="text-indigo-400">FastAPI & Streamlit</span> &rarr;
+          <span class="text-purple-400">Prometheus / Grafana</span> &rarr;
+          <span class="text-amber-400">Context Engine + LLM</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chronological Grid of All 9 Phases -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 font-bold flex items-center justify-center text-sm border border-cyan-500/30">
+          1-9
+        </div>
+        <div>
+          <h3 class="text-2xl font-bold text-white tracking-tight">Trilha Cronológica das Fases (1 a 9)</h3>
+          <p class="text-sm text-slate-400 mt-1">Clique em qualquer fase para abrir o tutorial técnico completo correspondente.</p>
+        </div>
+      </div>
+
+      <!-- 9 Cards Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- Fase 1 -->
+        <a href="ow1_mvp.html" class="group rounded-xl border border-slate-800 bg-slate-900/60 p-6 flex flex-col justify-between hover:border-cyan-500/50 hover:bg-slate-900/90 transition-all shadow-lg hover:shadow-cyan-500/10">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono">Fase 1</span>
+              <span class="text-xs text-slate-500 group-hover:text-cyan-400 transition-colors">Acessar guia &rarr;</span>
+            </div>
+            <h4 class="text-lg font-bold text-white group-hover:text-cyan-300 transition-colors">MVP & Ingestão Open Finance</h4>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Integração com a API Pluggy, autenticação, paginação v2 por cursor e implementação da cascata estrita de valoração de investimentos.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center gap-2 text-xs text-slate-500">
+            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+            <span>PluggyClient &bull; Cascata de Valoração</span>
+          </div>
+        </a>
+
+        <!-- Fase 2 -->
+        <a href="ow2_arquitetura.html" class="group rounded-xl border border-slate-800 bg-slate-900/60 p-6 flex flex-col justify-between hover:border-blue-500/50 hover:bg-slate-900/90 transition-all shadow-lg hover:shadow-blue-500/10">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">Fase 2</span>
+              <span class="text-xs text-slate-500 group-hover:text-blue-400 transition-colors">Acessar guia &rarr;</span>
+            </div>
+            <h4 class="text-lg font-bold text-white group-hover:text-blue-300 transition-colors">Clean Architecture & Domínio</h4>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Desacoplamento estrito de camadas, modelos canônicos Pydantic (<code>Position</code>, <code>Snapshot</code>) e isolamento entre regras e drivers de I/O.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center gap-2 text-xs text-slate-500">
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+            <span>app.domain.models &bull; Camadas Limpas</span>
+          </div>
+        </a>
+
+        <!-- Fase 3 -->
+        <a href="ow3_historico.html" class="group rounded-xl border border-slate-800 bg-slate-900/60 p-6 flex flex-col justify-between hover:border-sky-500/50 hover:bg-slate-900/90 transition-all shadow-lg hover:shadow-sky-500/10">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20 font-mono">Fase 3</span>
+              <span class="text-xs text-slate-500 group-hover:text-sky-400 transition-colors">Acessar guia &rarr;</span>
+            </div>
+            <h4 class="text-lg font-bold text-white group-hover:text-sky-300 transition-colors">Histórico & Persistência</h4>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Snapshots diários imutáveis, garantia estrita de idempotência por data/instituição, dual-mode SQLite/PostgreSQL e séries temporais.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center gap-2 text-xs text-slate-500">
+            <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+            <span>SnapshotRepository &bull; Séries 30/90D</span>
+          </div>
+        </a>
+
+        <!-- Fase 4 -->
+        <a href="ow4_api.html" class="group rounded-xl border border-slate-800 bg-slate-900/60 p-6 flex flex-col justify-between hover:border-indigo-500/50 hover:bg-slate-900/90 transition-all shadow-lg hover:shadow-indigo-500/10">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono">Fase 4</span>
+              <span class="text-xs text-slate-500 group-hover:text-indigo-400 transition-colors">Acessar guia &rarr;</span>
+            </div>
+            <h4 class="text-lg font-bold text-white group-hover:text-indigo-300 transition-colors">API REST & FastAPI</h4>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Exposição de contratos OpenAPI/Swagger sob <code>/api/v1</code>, endpoint assíncrono <code>POST /sync</code> com resposta 202 e injeção de dependência.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center gap-2 text-xs text-slate-500">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+            <span>FastAPI &bull; /api/v1 &bull; Swagger</span>
+          </div>
+        </a>
+
+        <!-- Fase 5 -->
+        <a href="ow5_analytics.html" class="group rounded-xl border border-slate-800 bg-slate-900/60 p-6 flex flex-col justify-between hover:border-emerald-500/50 hover:bg-slate-900/90 transition-all shadow-lg hover:shadow-emerald-500/10">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">Fase 5</span>
+              <span class="text-xs text-slate-500 group-hover:text-emerald-400 transition-colors">Acessar guia &rarr;</span>
+            </div>
+            <h4 class="text-lg font-bold text-white group-hover:text-emerald-300 transition-colors">Analytics & Gestão de Risco</h4>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Classificação multiclasse (RF/RV), gestão de risco por concentração custodial e consolidação híbrida de ativos e passivos manuais.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center gap-2 text-xs text-slate-500">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span>Analytics &bull; Bens e Financiamento Caixa</span>
+          </div>
+        </a>
+
+        <!-- Fase 6 -->
+        <a href="ow6_scheduler.html" class="group rounded-xl border border-slate-800 bg-slate-900/60 p-6 flex flex-col justify-between hover:border-purple-500/50 hover:bg-slate-900/90 transition-all shadow-lg hover:shadow-purple-500/10">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20 font-mono">Fase 6</span>
+              <span class="text-xs text-slate-500 group-hover:text-purple-400 transition-colors">Acessar guia &rarr;</span>
+            </div>
+            <h4 class="text-lg font-bold text-white group-hover:text-purple-300 transition-colors">Automação & Sincronização Diária</h4>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Orquestrador agendado via APScheduler às 09:00 BRT, gerenciamento de ciclo de vida (lifespan) no FastAPI e logs estruturados em JSON.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center gap-2 text-xs text-slate-500">
+            <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+            <span>APScheduler &bull; 09:00 SP &bull; JSON Logs</span>
+          </div>
+        </a>
+
+        <!-- Fase 7 -->
+        <a href="ow7_qa.html" class="group rounded-xl border border-slate-800 bg-slate-900/60 p-6 flex flex-col justify-between hover:border-teal-500/50 hover:bg-slate-900/90 transition-all shadow-lg hover:shadow-teal-500/10">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-teal-500/10 text-teal-400 border border-teal-500/20 font-mono">Fase 7</span>
+              <span class="text-xs text-slate-500 group-hover:text-teal-400 transition-colors">Acessar guia &rarr;</span>
+            </div>
+            <h4 class="text-lg font-bold text-white group-hover:text-teal-300 transition-colors">Qualidade & CI/CD</h4>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              176+ testes com 100% de cobertura forçada no pyproject.toml, linting com Ruff, checagem estrita de tipos com Mypy e pipeline GitHub Actions.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center gap-2 text-xs text-slate-500">
+            <span class="w-1.5 h-1.5 rounded-full bg-teal-400"></span>
+            <span>Pytest &bull; Mypy &bull; Ruff &bull; CI/CD</span>
+          </div>
+        </a>
+
+        <!-- Fase 8 -->
+        <a href="ow8_observabilidade.html" class="group rounded-xl border border-slate-800 bg-slate-900/60 p-6 flex flex-col justify-between hover:border-rose-500/50 hover:bg-slate-900/90 transition-all shadow-lg hover:shadow-rose-500/10">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 font-mono">Fase 8</span>
+              <span class="text-xs text-slate-500 group-hover:text-rose-400 transition-colors">Acessar guia &rarr;</span>
+            </div>
+            <h4 class="text-lg font-bold text-white group-hover:text-rose-300 transition-colors">Observabilidade SRE</h4>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Telemetria com endpoint <code>GET /metrics</code>, Prometheus para séries temporais e dashboard Grafana completo com 18 painéis e alertas.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center gap-2 text-xs text-slate-500">
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+            <span>Prometheus &bull; Grafana &bull; RED &bull; Métricas de Negócio</span>
+          </div>
+        </a>
+
+        <!-- Fase 9 -->
+        <a href="ow9_ia.html" class="group rounded-xl border border-slate-800 bg-slate-900/60 p-6 flex flex-col justify-between hover:border-amber-500/50 hover:bg-slate-900/90 transition-all shadow-lg hover:shadow-amber-500/10">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">Fase 9</span>
+              <span class="text-xs text-slate-500 group-hover:text-amber-400 transition-colors">Acessar guia &rarr;</span>
+            </div>
+            <h4 class="text-lg font-bold text-white group-hover:text-amber-300 transition-colors">Assistente com IA & Context Engine</h4>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Chat interativo no Streamlit com LLM local gratuita (Ollama Llama 3.2), Context Engine determinístico em Python e endpoint instrumentado.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center gap-2 text-xs text-slate-500">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+            <span>ContextBuilder &bull; Ollama &bull; OpenAI &bull; Anti-alucinação</span>
+          </div>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- Quickstart Guide -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 font-bold flex items-center justify-center text-sm border border-cyan-500/30">
+          &gt;_
+        </div>
+        <div>
+          <h3 class="text-2xl font-bold text-white tracking-tight">Guia Rápido de Execução da Plataforma</h3>
+          <p class="text-sm text-slate-400 mt-1">Comandos essenciais para subir toda a stack em ambiente local ou VM.</p>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-4">
+        <div class="space-y-2">
+          <span class="text-xs font-semibold text-slate-300 block">1. Subir Infraestrutura SRE (Prometheus & Grafana)</span>
+          <pre class="text-xs text-cyan-300 p-3 bg-slate-950 rounded-lg border border-slate-800 font-mono overflow-x-auto"><code>docker compose up -d
+<span class="text-slate-500"># Prometheus em http://localhost:9090 | Grafana em http://localhost:3000</span></code></pre>
+        </div>
+
+        <div class="space-y-2">
+          <span class="text-xs font-semibold text-slate-300 block">2. Iniciar Backend FastAPI (com Scheduler ativo)</span>
+          <pre class="text-xs text-cyan-300 p-3 bg-slate-950 rounded-lg border border-slate-800 font-mono overflow-x-auto"><code>export LLM_PROVIDER=ollama
+export OLLAMA_MODEL=llama3.2:1b
+./.venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000</code></pre>
+        </div>
+
+        <div class="space-y-2">
+          <span class="text-xs font-semibold text-slate-300 block">3. Iniciar Dashboard Streamlit</span>
+          <pre class="text-xs text-cyan-300 p-3 bg-slate-950 rounded-lg border border-slate-800 font-mono overflow-x-auto"><code>./.venv/bin/streamlit run dashboard/Home.py</code></pre>
+        </div>
+
+        <div class="space-y-2">
+          <span class="text-xs font-semibold text-slate-300 block">4. Garantir Qualidade e Testes (100% Cobertura)</span>
+          <pre class="text-xs text-cyan-300 p-3 bg-slate-950 rounded-lg border border-slate-800 font-mono overflow-x-auto"><code>ruff check . && mypy app && pytest --cov=app --cov-report=term-missing</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
+      <div>Open Wealth &bull; Documentação Técnica &bull; Fases 1 a 9 Concluídas</div>
+      <div class="flex items-center gap-4">
+        <span>Clean Architecture</span>
+        <span>&bull;</span>
+        <span>Open Finance</span>
+        <span>&bull;</span>
+        <span>FastAPI + Streamlit</span>
+      </div>
+    </footer>
+
+  </main>
+</body>
+</html>
