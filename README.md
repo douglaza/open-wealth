@@ -10,8 +10,7 @@ snapshots, persistência em SQLite, API FastAPI e visualizações em Streamlit.
 
 ## Tutorial
 
-- [Tutorial da Fase 9 — Insights com IA (Assistente Patrimonial)](docs/tutorial_fase9.html).
-- [Tutorial da Fase 8 — Observabilidade](docs/tutorial_fase8.html).
+- [Tutorial do Projeto](https://douglas.github.io/open-wealth/tutorial_geral.html)
 
 ## Funcionalidades implementadas
 

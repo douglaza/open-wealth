@@ -6,12 +6,15 @@ from fastapi.responses import JSONResponse
 from app.api.routes import router
 from app.core.exceptions import PluggyError
 from app.core.metrics import refresh_financial_metrics
+from app.core.scheduler import start_scheduler, stop_scheduler
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     refresh_financial_metrics()
+    start_scheduler()
     yield
+    stop_scheduler()
 
 
 def create_app() -> FastAPI:
