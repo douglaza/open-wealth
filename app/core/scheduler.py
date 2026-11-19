@@ -1,21 +1,25 @@
-from apscheduler.schedulers.background import BackgroundScheduler
+from zoneinfo import ZoneInfo
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from app.services.sync import sync_weekly
 
-scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
+TZ_SP = ZoneInfo("America/Sao_Paulo")
+
+scheduler = AsyncIOScheduler(timezone=TZ_SP)
 
 
-def start_scheduler():
-    # Todos os dias às 09:00
+def start_scheduler() -> None:
+    trigger = CronTrigger(hour=9, minute=0, timezone=TZ_SP)
     scheduler.add_job(
         sync_weekly,
-        CronTrigger(hour=9, minute=0),
+        trigger=trigger,
         id="sync_daily",
         replace_existing=True,
     )
-    scheduler.start()
-    print("⏰ Scheduler iniciado: sync diário às 09:00")
+    if not scheduler.running:
+        scheduler.start()
 
 
 def stop_scheduler():
